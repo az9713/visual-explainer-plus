@@ -373,9 +373,68 @@ Wrap the canvas in a styled container:
 }
 ```
 
-## anime.js — Orchestrated Animations
+## GSAP — Scroll-Driven Animations
 
-Use when a diagram has 10+ elements and you want a choreographed entrance sequence (staggered reveals, path drawing, count-up numbers). For simpler diagrams, CSS `animation-delay` staggering is sufficient.
+Use for scroll-triggered reveals, pinned sections, scrub-driven animations, text splitting, and SVG path drawing on multi-section pages. GSAP is the primary animation library for pages with 4+ sections. All plugins are free since Webflow's 2024 acquisition.
+
+**CDN (core + plugins):**
+```html
+<!-- GSAP core — required -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+
+<!-- ScrollTrigger — scroll-driven animations (required for scroll pages) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+
+<!-- SplitText — hero text character/word reveals (optional) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
+
+<!-- DrawSVGPlugin — SVG path drawing animations (optional) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js"></script>
+```
+
+Only import plugins you use. Core + ScrollTrigger is the minimum for scroll reveals.
+
+**Plugin roles:**
+| Plugin | Use for |
+|---|---|
+| ScrollTrigger | Viewport-based triggers, `batch()` for card reveals, `pin` for comparison panels, `scrub` for scroll-position-driven animation |
+| SplitText | Split headings into chars/words for staggered entrance. Editorial hero effect. |
+| DrawSVGPlugin | Animate SVG `<path>` stroke drawing. Used on Mermaid edge progressive reveal. |
+
+**Integration with Lenis** (smooth scroll library — see below):
+```javascript
+const lenis = new Lenis({ autoRaf: false, lerp: 0.08 });
+lenis.on('scroll', ScrollTrigger.update);
+gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+gsap.ticker.lagSmoothing(0);
+```
+
+See `./scroll-animations.md` for complete patterns: section reveals, pinned panels, hero text, Mermaid progressive reveal, scroll progress bar, and the full boilerplate.
+
+## Lenis — Smooth Scroll
+
+Lightweight (2KB) smooth scroll library. Replaces native `scrollIntoView({ behavior: 'smooth' })` with consistent cross-browser easing and momentum. Required companion for GSAP ScrollTrigger on scroll-driven pages.
+
+**CDN:**
+```html
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.17/dist/lenis.min.js"></script>
+```
+
+**Key behaviors:**
+- Smooths wheel and touch scroll with configurable lerp/duration
+- Syncs with GSAP ScrollTrigger for coordinated scroll-driven animations
+- `data-lenis-prevent` attribute on elements that need native scroll (`.mermaid-wrap`, `.table-scroll`, code blocks with overflow)
+- Skip on `prefers-reduced-motion: reduce` — use native scroll instead
+
+**When to include:** Any page using GSAP ScrollTrigger for scroll-driven animations. Not needed for single-section CSS-only pages or slide decks.
+
+See `./scroll-animations.md` for the Lenis + ScrollTrigger sync pattern and Mermaid coexistence rules.
+
+## anime.js — Orchestrated Load Animations (Legacy)
+
+Use for load-time choreographed entrance sequences on single-section diagrams. For multi-section pages, prefer GSAP ScrollTrigger (see above) which handles both load and scroll animations with a single library.
+
+anime.js is still valid for simple pages where scroll-triggered reveals aren't needed — it's lighter than GSAP core and sufficient for staggered fade-ins and SVG draw-ins on load.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>

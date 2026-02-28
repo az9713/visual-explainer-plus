@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Gateway Security Audit — Scroll Showcase</title>
+<!--
+  Reference template for the visual-explainer skill: scroll-driven animations.
+  Amber/emerald palette — distinctly different from terracotta (architecture),
+  teal/cyan (mermaid), rose/cranberry (data-table), midnight (slide-deck).
+  Font: Bricolage Grotesque + Fragment Mono.
+
+  All 6 GSAP + Lenis patterns demonstrated:
+  1. Scroll-triggered section reveals (gs-reveal, gs-reveal-scale, ScrollTrigger.batch)
+  2. Smooth scroll navigation via Lenis (lenis.scrollTo in TOC click handler)
+  3. Hero text reveals via SplitText (character stagger on page title)
+  4. Mermaid diagram progressive reveal via DrawSVG (nodes → labels → edges)
+  5. Pinned comparison panels (before pins while after scrolls in, pin indicator)
+  6. Scroll progress bar (thin bar at viewport top, GSAP scrub-driven)
+
+  KEY RULES (do not break):
+  - Never use .node as a CSS class — Mermaid uses it internally
+  - Never set color: in classDef — breaks opposite color scheme
+  - Use semi-transparent fills (8-digit hex) in classDef
+  - theme: 'base' with custom themeVariables — other themes ignore overrides
+  - data-lenis-prevent on .mermaid-wrap and .table-scroll
+  - Always check prefers-reduced-motion before initializing GSAP
+-->
+
+<!-- Fonts: Bricolage Grotesque (body/headings) + Fragment Mono (labels/code) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Fragment+Mono:ital@0;1&display=swap" rel="stylesheet">
+
+<!-- Lenis smooth scroll — load in head so it's ready before body scripts -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.17/dist/lenis.min.js"></script>
+
+<style>
+/* ========================================================
+   THEME — Amber/Emerald palette (light-first)
+   ======================================================== */
+:root {
+  --font-body: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-mono: 'Fragment Mono', 'SF Mono', Consolas, monospace;
+
+  --bg: #faf8f4;
+  --surface: #ffffff;
+  --surface-elevated: #fffef8;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-bright: rgba(0, 0, 0, 0.15);
+  --text: #1c1917;
+  --text-dim: #78716c;
+
+  --accent: #d97706;           /* amber-600 */
+  --accent-dim: rgba(217, 119, 6, 0.08);
+
+  --node-a: #d97706;           /* amber — primary */
+  --node-a-dim: rgba(217, 119, 6, 0.08);
+  --node-b: #059669;           /* emerald — secondary */
+  --node-b-dim: rgba(5, 150, 105, 0.08);
+  --node-c: #0284c7;           /* sky blue — tertiary */
+  --node-c-dim: rgba(2, 132, 199, 0.08);
+
+  --green: #059669;
+  --green-dim: rgba(5, 150, 105, 0.08);
+  --red: #dc2626;
+  --red-dim: rgba(220, 38, 38, 0.08);
+  --orange: #d97706;
+  --orange-dim: rgba(217, 119, 6, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917;
+    --surface: #292524;
+    --surface-elevated: #302e2b;
+    --border: rgba(255, 255, 255, 0.06);
+    --border-bright: rgba(255, 255, 255, 0.12);
+    --text: #faf8f4;
+    --text-dim: #a8a29e;
+
+    --accent: #f59e0b;           /* amber-400 */
+    --accent-dim: rgba(245, 158, 11, 0.10);
+
+    --node-a: #f59e0b;
+    --node-a-dim: rgba(245, 158, 11, 0.10);
+    --node-b: #34d399;           /* emerald-400 */
+    --node-b-dim: rgba(52, 211, 153, 0.10);
+    --node-c: #38bdf8;           /* sky-400 */
+    --node-c-dim: rgba(56, 189, 248, 0.10);
+
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.10);
+    --red: #f87171;
+    --red-dim: rgba(248, 113, 113, 0.10);
+    --orange: #fbbf24;
+    --orange-dim: rgba(251, 191, 36, 0.10);
+  }
+}
+
+/* ========================================================
+   RESET + BASE
+   ======================================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background-color: var(--bg);
+  /* Subtle dot grid — from css-patterns.md "Background Atmosphere" */
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+  padding: 40px 40px 40px 32px;
+  overflow-wrap: break-word;
+}
+
+/* ========================================================
+   PATTERN 6: Scroll Progress Bar
+   IMPORTANT: Keep before .wrap so it sits above all content in source
+   ======================================================== */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: var(--accent);
+  z-index: 9999;
+  pointer-events: none;
+  /* No transition — GSAP scrub drives this directly */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-progress { display: none; }
+}
+
+/* ========================================================
+   LAYOUT — 170px sidebar + 1fr main (from responsive-nav.md)
+   ======================================================== */
+.wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 0 40px;
+}
+
+.main { min-width: 0; }
+
+/* ========================================================
+   TOC — Desktop sticky sidebar (from responsive-nav.md)
+   ======================================================== */
+.toc {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  padding: 14px 0;
+  grid-row: 1 / -1;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.toc::-webkit-scrollbar { width: 3px; }
+.toc::-webkit-scrollbar-thumb { background: var(--surface-elevated); border-radius: 2px; }
+
+.toc-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  padding: 0 0 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.toc a {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  line-height: 1.4;
+  margin-bottom: 1px;
+}
+
+.toc a:hover { color: var(--text); background: var(--surface); }
+.toc a.active { color: var(--text); border-left-color: var(--accent); }
+
+/* ========================================================
+   TOC — Mobile horizontal bar (from responsive-nav.md)
+   ======================================================== */
+@media (max-width: 1000px) {
+  .wrap { grid-template-columns: 1fr; padding-top: 0; }
+  body { padding-top: 0; }
+
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    max-height: none;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    margin: 0 -40px;
+    padding-left: 32px;
+    padding-right: 32px;
+    grid-row: auto;
+  }
+
+  .toc::-webkit-scrollbar { display: none; }
+  .toc-title { display: none; }
+
+  .toc a {
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 4px 4px 0 0;
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+
+  .toc a.active {
+    border-left: none;
+    border-bottom-color: var(--accent);
+    background: var(--surface);
+  }
+
+  .main { padding-top: 20px; }
+  .sec-head { scroll-margin-top: 52px; }
+}
+
+/* ========================================================
+   TYPOGRAPHY
+   ======================================================== */
+h1, h2, h3, h4 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ========================================================
+   HERO SECTION
+   ======================================================== */
+.hero {
+  padding: 56px 0 48px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+
+/* PATTERN 3 target — SplitText splits this into chars */
+.hero-title {
+  font-size: clamp(36px, 5vw, 54px);
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+  /* overflow hidden clips the translateY animation per character */
+  overflow: hidden;
+}
+
+/* SplitText injects these wrappers — define clip container */
+.gs-word {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.gs-char {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-word, .gs-char { opacity: 1 !important; transform: none !important; }
+}
+
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.hero-meta__date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.hero-meta__tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.hero-subtitle {
+  font-size: 17px;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 60ch;
+  line-height: 1.55;
+  margin-top: 8px;
+}
+
+/* ========================================================
+   SECTION HEADINGS
+   ======================================================== */
+.sec-head {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 48px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  scroll-margin-top: 24px;
+}
+
+.sec-head::before {
+  content: attr(data-num);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* ========================================================
+   DEPTH TIERS (from css-patterns.md)
+   ======================================================== */
+
+/* Base card — never use .node (Mermaid owns that class) */
+.ve-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  position: relative;
+}
+
+/* Elevated: KPIs, key sections */
+.ve-card--elevated {
+  background: var(--surface-elevated);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Recessed: secondary content, code blocks */
+.ve-card--recessed {
+  background: color-mix(in srgb, var(--bg) 70%, var(--surface) 30%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Hero: executive summary — demands attention */
+.ve-card--hero {
+  background: color-mix(in srgb, var(--surface) 92%, var(--accent) 8%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-color: color-mix(in srgb, var(--border) 50%, var(--accent) 50%);
+}
+
+.ve-card__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--node-a);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ve-card__label::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ========================================================
+   PATTERN 1 — Scroll-triggered reveal initial states
+   GSAP animates opacity/transform on scroll entry
+   ======================================================== */
+.gs-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  will-change: opacity, transform;
+}
+
+.gs-reveal-scale {
+  opacity: 0;
+  transform: scale(0.92);
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-reveal,
+  .gs-reveal-scale {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ========================================================
+   KPI ROW — 4 cards with gs-reveal-scale
+   ======================================================== */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.kpi-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
+}
+
+.kpi-card__value {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.kpi-card__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.kpi-card__sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--node-b);
+  margin-top: 3px;
+}
+
+/* Accent-colored top border per KPI to differentiate them */
+.kpi-card:nth-child(1) { border-top: 3px solid var(--node-a); }
+.kpi-card:nth-child(2) { border-top: 3px solid var(--red); }
+.kpi-card:nth-child(3) { border-top: 3px solid var(--node-b); }
+.kpi-card:nth-child(4) { border-top: 3px solid var(--node-c); }
+
+/* ========================================================
+   CARD GRID — for findings and remediation sections
+   ======================================================== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.card-grid > * { min-width: 0; }
+
+/* ========================================================
+   PATTERN 4 — Mermaid diagram wrap with zoom controls
+   data-lenis-prevent stops Lenis from intercepting Ctrl+scroll
+   ======================================================== */
+.mermaid-wrap {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 24px;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.mermaid-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.mermaid-wrap::-webkit-scrollbar-track { background: transparent; }
+.mermaid-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.mermaid-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+.mermaid-wrap .mermaid {
+  transition: transform 0.2s ease;
+  transform-origin: center center;
+}
+
+.mermaid-wrap.is-zoomed { cursor: grab; }
+.mermaid-wrap.is-panning { cursor: grabbing; user-select: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mermaid-wrap .mermaid { transition: none; }
+}
+
+/* Zoom control buttons */
+.zoom-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 2px;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.zoom-controls button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.zoom-controls button:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Mermaid CSS overrides — text follows page color scheme */
+.mermaid .nodeLabel { color: var(--text) !important; font-family: var(--font-body) !important; font-size: 15px !important; }
+.mermaid .edgeLabel { color: var(--text-dim) !important; background-color: var(--bg) !important; font-family: var(--font-mono) !important; font-size: 12px !important; }
+.mermaid .edgeLabel rect { fill: var(--bg) !important; }
+.mermaid .node rect, .mermaid .node circle, .mermaid .node polygon { stroke-width: 1.5px; }
+.mermaid .edge-pattern-solid { stroke-width: 1.5px; }
+
+/* ========================================================
+   PATTERN 5 — Pinned comparison panels
+   ======================================================== */
+.pinned-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  /* enough height for pin to be meaningful without scroll-jacking too long */
+  min-height: 80vh;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.pinned-comparison__before,
+.pinned-comparison__after { min-width: 0; }
+
+/* Mobile: stack vertically, no pinning */
+@media (max-width: 768px) {
+  .pinned-comparison {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+/* Vulnerability list inside comparison panels */
+.vuln-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vuln-list li {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  padding-left: 28px;
+  position: relative;
+}
+
+/* Absolute marker — never flex on li (see css-patterns.md Overflow Protection) */
+.vuln-list li::before {
+  position: absolute;
+  left: 10px;
+  top: 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vuln-list li.vuln--critical {
+  background: var(--red-dim);
+  color: var(--text);
+}
+.vuln-list li.vuln--critical::before {
+  content: '!';
+  color: var(--red);
+}
+
+.vuln-list li.vuln--warn {
+  background: var(--orange-dim);
+}
+.vuln-list li.vuln--warn::before {
+  content: '~';
+  color: var(--orange);
+}
+
+.vuln-list li.vuln--ok {
+  background: var(--green-dim);
+}
+.vuln-list li.vuln--ok::before {
+  content: '+';
+  color: var(--green);
+}
+
+/* ========================================================
+   PIN INDICATOR — visible scroll cue for pinned section
+   ======================================================== */
+.pin-indicator {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.pin-indicator.visible { opacity: 1; }
+
+.pin-indicator__track {
+  width: 3px;
+  height: 60px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pin-indicator__fill {
+  width: 100%;
+  height: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: height 0.1s linear;
+}
+
+.pin-indicator__label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+
+/* ========================================================
+   DATA TABLE — Findings section
+   ======================================================== */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.data-table th {
+  background: var(--surface-elevated);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--border-bright);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text);
+}
+
+.data-table .wide { min-width: 220px; max-width: 420px; }
+.data-table td.num, .data-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.data-table tbody tr:nth-child(even) { background: var(--accent-dim); }
+.data-table tbody tr { transition: background 0.15s ease; }
+.data-table tbody tr:hover { background: color-mix(in srgb, var(--accent-dim) 160%, transparent); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Status badges */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.status--critical { background: var(--red-dim); color: var(--red); }
+.status--high     { background: var(--orange-dim); color: var(--orange); }
+.status--medium   { background: color-mix(in srgb, var(--orange-dim) 50%, var(--accent-dim) 50%); color: var(--text-dim); }
+.status--fixed    { background: var(--green-dim); color: var(--green); }
+.status--info     { background: var(--node-c-dim); color: var(--node-c); }
+
+/* ========================================================
+   REMEDIATION TIMELINE CARDS
+   ======================================================== */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 20px;
+  border-left: 2px solid var(--border-bright);
+  margin-left: 8px;
+}
+
+.timeline-item {
+  position: relative;
+  padding: 0 0 28px 24px;
+}
+
+.timeline-item:last-child { padding-bottom: 0; }
+
+/* Dot on the timeline line */
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 20px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.timeline-item--done::before { background: var(--green); box-shadow: 0 0 0 2px var(--green); }
+.timeline-item--next::before { background: var(--node-c); box-shadow: 0 0 0 2px var(--node-c); }
+
+.timeline-item__phase {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.timeline-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.timeline-item__desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+
+/* ========================================================
+   NEXT STEPS — compact list cards
+   ======================================================== */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.steps-grid > * { min-width: 0; }
+
+.step-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.step-card__num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-card__body { min-width: 0; }
+.step-card__title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.step-card__desc  { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+
+/* ========================================================
+   DESCRIPTION TEXT / PROSE
+   ======================================================== */
+.prose {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  max-width: 72ch;
+}
+
+.prose + .ve-card { margin-top: 16px; }
+
+/* Inline highlight */
+mark {
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 0 3px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ========================================================
+   SPACERS & UTILITIES
+   ======================================================== */
+.mt-4  { margin-top: 16px; }
+.mt-6  { margin-top: 24px; }
+.mt-8  { margin-top: 32px; }
+.mb-6  { margin-bottom: 24px; }
+
+/* Grid/flex children must shrink — overflow protection */
+.card-grid > *, .steps-grid > *, .kpi-row > * { min-width: 0; }
+
+</style>
+</head>
+<body>
+
+<!-- PATTERN 6: Scroll progress bar element — driven by GSAP scrub -->
+<div class="scroll-progress"></div>
+
+<!-- PIN INDICATOR: shown during pinned comparison (Pattern 5) -->
+<div class="pin-indicator" id="pinIndicator">
+  <div class="pin-indicator__track">
+    <div class="pin-indicator__fill" id="pinFill"></div>
+  </div>
+  <span class="pin-indicator__label">Scroll to compare</span>
+</div>
+
+<div class="wrap">
+
+  <!-- PATTERN 2: Lenis smooth scroll — TOC uses lenis.scrollTo() -->
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+    <a href="#hero">Overview</a>
+    <a href="#s1">Summary</a>
+    <a href="#s2">Architecture</a>
+    <a href="#s3">Comparison</a>
+    <a href="#s4">Findings</a>
+    <a href="#s5">Remediation</a>
+    <a href="#s6">Next Steps</a>
+  </nav>
+
+  <div class="main">
+
+    <!-- ══════════════════════════════════════════════════
+         HERO — PATTERN 3: SplitText hero title animation
+         .hero-title is the SplitText target
+         ═══════════════════════════════════════════════ -->
+    <section class="hero" id="hero">
+      <!-- SplitText splits this heading into chars and staggers them in -->
+      <h1 class="hero-title">API Gateway Security Audit</h1>
+      <p class="hero-subtitle">A comprehensive review of authentication surfaces, rate-limiting policies, and exposure boundaries across 47 production endpoints.</p>
+      <div class="hero-meta">
+        <span class="hero-meta__date">Audit period: 2026-01-15 – 2026-02-14</span>
+        <span class="hero-meta__tag">v2.4.1-gateway</span>
+        <span class="hero-meta__tag">GSAP + Lenis Scroll Demo</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════
+         KPI ROW — PATTERN 1: gs-reveal-scale
+         ScrollTrigger.batch reveals these with back.out easing
+         ═══════════════════════════════════════════════ -->
+    <div class="kpi-row">
+      <div class="kpi-card gs-reveal-scale">
+        <div class="kpi-card__value">47</div>
+        <div class="kpi-card__label">Endpoints Scanned</div>
+        <div class="kpi-card__sub">+8 since last audit</div>
+      </div>
+      <div class="kpi-card gs-reveal-scale">
+        <div class="kpi-card__value">12</div>
+        <div class="kpi-card__label">Vulnerabilities</div>
+        <div class="kpi-card__sub">3 critical, 5 high</div>
+      </div>
+      <div class="kpi-card gs-reveal-scale">
+        <div class="kpi-card__value">94%</div>
+        <div class="kpi-card__label">Coverage</div>
+        <div class="kpi-card__sub">Auth + rate-limit</div>
+      </div>
+      <div class="kpi-card gs-reveal-scale">
+        <div class="kpi-card__value">B+</div>
+        <div class="kpi-card__label">Risk Score</div>
+        <div class="kpi-card__sub">Up from B- (Q4)</div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION 1: Executive Summary
+         PATTERN 1: gs-reveal on cards
+         ═══════════════════════════════════════════════ -->
+    <h2 class="sec-head" id="s1" data-num="01">Executive Summary</h2>
+
+    <div class="ve-card ve-card--hero gs-reveal">
+      <div class="ve-card__label">Findings Overview</div>
+      <p style="font-size: 14px; line-height: 1.7; color: var(--text);">
+        The audit identified <mark>12 vulnerabilities</mark> across the API gateway layer, including three critical issues
+        in the JWT validation middleware where algorithm confusion attacks are possible. Authentication coverage
+        is strong at 94%, but <mark>3 public endpoints</mark> lack rate-limiting and represent the highest-risk surface.
+        Overall posture improved from B- to B+ quarter-over-quarter, driven by the WAF rule updates in January.
+      </p>
+    </div>
+
+    <div class="card-grid mt-6">
+      <div class="ve-card gs-reveal">
+        <div class="ve-card__label" style="color: var(--red);">Critical Issues</div>
+        <p style="font-size: 13px; color: var(--text-dim); line-height: 1.6;">
+          JWT algorithm confusion (CVE-2026-0041), missing CORS origin validation on
+          <code style="font-family: var(--font-mono); font-size: 11px; background: var(--accent-dim); color: var(--accent); padding: 1px 5px; border-radius: 3px;">/api/v2/admin/*</code>,
+          and unauthenticated path traversal in the static asset router.
+        </p>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="ve-card__label" style="color: var(--orange);">High Priority</div>
+        <p style="font-size: 13px; color: var(--text-dim); line-height: 1.6;">
+          Rate limiting absent on 3 public endpoints. Bearer token expiry not validated on internal
+          service-to-service calls. Request body size limits not enforced upstream of auth.
+        </p>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="ve-card__label" style="color: var(--green);">Strengths</div>
+        <p style="font-size: 13px; color: var(--text-dim); line-height: 1.6;">
+          WAF rules block 98.7% of OWASP Top-10 patterns. mTLS enforced between all internal
+          services. Token rotation implemented correctly. Audit logging covers all authenticated routes.
+        </p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION 2: Architecture Overview
+         PATTERN 4: Mermaid DrawSVG progressive reveal
+         Nodes fade in → Labels appear → Edges draw in
+         data-lenis-prevent: Lenis won't intercept Ctrl+scroll
+         ═══════════════════════════════════════════════ -->
+    <h2 class="sec-head" id="s2" data-num="02">Architecture Overview</h2>
+
+    <p class="prose gs-reveal mb-6">
+      Request flow through the gateway layer. Nodes animate in first, then connection edges draw
+      between them as you scroll — demonstrating the DrawSVG progressive reveal pattern.
+    </p>
+
+    <!-- data-lenis-prevent: Lenis ignores scroll events inside this container -->
+    <div class="mermaid-wrap" data-lenis-prevent id="mermaidWrap">
+      <div class="zoom-controls">
+        <button onclick="zoomDiagram(this, 1.2)" title="Zoom in">+</button>
+        <button onclick="zoomDiagram(this, 0.8)" title="Zoom out">&minus;</button>
+        <button onclick="resetZoom(this)" title="Reset zoom">&#8634;</button>
+      </div>
+      <!--
+        MERMAID: graph LR with amber/emerald classDefs.
+        CRITICAL RULES applied here:
+        - theme: 'base' (set in JS init)
+        - classDef uses 8-digit hex fills (semi-transparent) — work in light + dark
+        - NO color: in classDef — CSS .nodeLabel override handles text color
+        - Node IDs are simple alphanumeric
+      -->
+      <pre class="mermaid">
+graph LR
+  Client["Client"] --> WAF["WAF"]
+  WAF --> Gateway["API Gateway"]
+  Gateway --> Auth["Auth Service"]
+  Auth --> RateLimit["Rate Limiter"]
+  RateLimit --> Router["Router"]
+  Router --> API["API Service"]
+  Router --> Static["Static Assets"]
+
+  classDef amber fill:#d9770622,stroke:#d97706,stroke-width:2px
+  classDef emerald fill:#05966922,stroke:#059669,stroke-width:2px
+  classDef sky fill:#0284c722,stroke:#0284c7,stroke-width:2px
+  classDef warn fill:#dc262622,stroke:#dc2626,stroke-width:2px
+
+  class Client,WAF amber
+  class Gateway,Auth emerald
+  class RateLimit,Router sky
+  class API,Static emerald
+      </pre>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION 3: Vulnerability Comparison
+         PATTERN 5: Pinned before/after panels
+         .pinned-comparison__before pins while __after scrolls in
+         ═══════════════════════════════════════════════ -->
+    <h2 class="sec-head" id="s3" data-num="03">Vulnerability Comparison</h2>
+
+    <p class="prose gs-reveal mb-6">
+      The "Before" panel pins in place while you scroll — demonstrating the GSAP pin + scrub pattern.
+      Watch the scroll indicator on the right edge. The "After" panel slides in from the right.
+    </p>
+
+    <div class="pinned-comparison" id="pinnedComparison">
+      <div class="pinned-comparison__before" id="pinnedBefore">
+        <div class="ve-card" style="border-top: 3px solid var(--red);">
+          <div class="ve-card__label" style="color: var(--red);">Before — Q4 2025</div>
+          <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px;">
+            State before January WAF updates and auth hardening sprint.
+          </p>
+          <ul class="vuln-list">
+            <li class="vuln--critical">JWT algorithm confusion — no alg validation</li>
+            <li class="vuln--critical">CORS wildcard on all admin routes</li>
+            <li class="vuln--critical">Path traversal in static router</li>
+            <li class="vuln--warn">No rate limiting on 7 public endpoints</li>
+            <li class="vuln--warn">Service tokens never expire</li>
+            <li class="vuln--warn">Request body unbounded upstream of auth</li>
+            <li class="vuln--warn">Missing audit log on read operations</li>
+            <li class="vuln--warn">Header injection possible in proxy layer</li>
+          </ul>
+          <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);">RISK SCORE</span>
+            <div style="font-size: 32px; font-weight: 700; color: var(--red); letter-spacing: -1px;">B−</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pinned-comparison__after" id="pinnedAfter">
+        <div class="ve-card" style="border-top: 3px solid var(--green);">
+          <div class="ve-card__label" style="color: var(--green);">After — Q1 2026</div>
+          <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px;">
+            Current state. Three critical issues remain open; all highs addressed.
+          </p>
+          <ul class="vuln-list">
+            <li class="vuln--critical">JWT algorithm confusion — <strong>open, sprint 24</strong></li>
+            <li class="vuln--critical">CORS on admin routes — <strong>partial fix applied</strong></li>
+            <li class="vuln--critical">Path traversal — <strong>open, assigned</strong></li>
+            <li class="vuln--ok">Rate limiting on 4/7 endpoints — 3 remain</li>
+            <li class="vuln--ok">Service token TTL: 8h enforced</li>
+            <li class="vuln--ok">Body size limits: 2MB at WAF</li>
+            <li class="vuln--ok">Audit logging extended to reads</li>
+            <li class="vuln--ok">Header sanitization added to proxy</li>
+          </ul>
+          <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);">RISK SCORE</span>
+            <div style="font-size: 32px; font-weight: 700; color: var(--green); letter-spacing: -1px;">B+</div>
+          </div>
+        </div>
+
+        <!-- Extra content below the after-panel so there's room to scroll while pinned -->
+        <div class="ve-card mt-4" style="font-size: 13px; color: var(--text-dim); line-height: 1.65;">
+          <div class="ve-card__label" style="color: var(--node-c);">Q1 Delta</div>
+          <p>Five high-severity issues resolved in the January hardening sprint. Three critical items remain open
+          and are scheduled for Sprint 24 (Feb 28 – Mar 14). Net exposure reduced by 63% measured by
+          CVSS weighted score.</p>
+        </div>
+
+        <div class="ve-card mt-4" style="font-size: 13px; color: var(--text-dim); line-height: 1.65;">
+          <div class="ve-card__label">Coverage Trend</div>
+          <!-- Simple inline SVG sparkline — no external library needed -->
+          <svg viewBox="0 0 200 48" style="width: 100%; max-width: 280px; height: 48px; display: block; margin: 8px 0;">
+            <polyline points="0,40 30,36 60,32 90,28 120,22 150,16 180,12 200,8"
+              fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="0,40 30,36 60,32 90,28 120,22 150,16 180,12 200,8"
+              fill="url(#spark-fill)" stroke="none" opacity="0.15"/>
+            <defs>
+              <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--green)"/>
+                <stop offset="100%" stop-color="transparent"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <p style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);">Auth coverage: 78% → 94% over 8 sprints</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION 4: Findings Table
+         PATTERN 1: gs-reveal on the table wrapper
+         data-lenis-prevent on .table-scroll
+         ═══════════════════════════════════════════════ -->
+    <h2 class="sec-head" id="s4" data-num="04">Findings</h2>
+
+    <div class="table-wrap gs-reveal">
+      <!-- data-lenis-prevent: table has overflow:auto, Lenis must not intercept -->
+      <div class="table-scroll" data-lenis-prevent>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th class="wide">Finding</th>
+              <th>Endpoint</th>
+              <th>Severity</th>
+              <th>Status</th>
+              <th class="num">CVSS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>SEC-041</code></td>
+              <td class="wide">JWT algorithm confusion — <code>alg</code> header accepted from client; allows RS256→HS256 downgrade attack</td>
+              <td><code>/api/v2/*</code></td>
+              <td><span class="status status--critical">Critical</span></td>
+              <td><span class="status status--high">Open</span></td>
+              <td class="num">9.1</td>
+            </tr>
+            <tr>
+              <td><code>SEC-038</code></td>
+              <td class="wide">CORS wildcard on admin namespace — <code>Access-Control-Allow-Origin: *</code> permits cross-origin reads of sensitive endpoints</td>
+              <td><code>/api/v2/admin/*</code></td>
+              <td><span class="status status--critical">Critical</span></td>
+              <td><span class="status status--high">Partial</span></td>
+              <td class="num">8.8</td>
+            </tr>
+            <tr>
+              <td><code>SEC-035</code></td>
+              <td class="wide">Path traversal in static asset router — <code>../</code> sequences not normalised before filesystem lookup</td>
+              <td><code>/static/*</code></td>
+              <td><span class="status status--critical">Critical</span></td>
+              <td><span class="status status--high">Open</span></td>
+              <td class="num">8.3</td>
+            </tr>
+            <tr>
+              <td><code>SEC-033</code></td>
+              <td class="wide">No rate limiting on public health and metrics endpoints — susceptible to enumeration</td>
+              <td><code>/health, /metrics</code></td>
+              <td><span class="status status--high">High</span></td>
+              <td><span class="status status--info">Scheduled</span></td>
+              <td class="num">7.5</td>
+            </tr>
+            <tr>
+              <td><code>SEC-029</code></td>
+              <td class="wide">Bearer tokens for internal service calls never validated for expiry — stolen tokens valid indefinitely</td>
+              <td><code>/internal/*</code></td>
+              <td><span class="status status--high">High</span></td>
+              <td><span class="status status--fixed">Fixed</span></td>
+              <td class="num">7.2</td>
+            </tr>
+            <tr>
+              <td><code>SEC-027</code></td>
+              <td class="wide">Request body size not bounded upstream of auth middleware — allows large payload to exhaust auth worker threads</td>
+              <td><code>POST /*</code></td>
+              <td><span class="status status--high">High</span></td>
+              <td><span class="status status--fixed">Fixed</span></td>
+              <td class="num">6.8</td>
+            </tr>
+            <tr>
+              <td><code>SEC-024</code></td>
+              <td class="wide">Audit log omits read operations — no visibility into data exfiltration via GET requests</td>
+              <td><code>GET /*</code></td>
+              <td><span class="status status--high">High</span></td>
+              <td><span class="status status--fixed">Fixed</span></td>
+              <td class="num">6.5</td>
+            </tr>
+            <tr>
+              <td><code>SEC-019</code></td>
+              <td class="wide">Proxy layer forwards raw <code>X-Forwarded-*</code> headers without sanitisation — allows IP spoofing of client address</td>
+              <td><code>/*</code></td>
+              <td><span class="status status--high">High</span></td>
+              <td><span class="status status--fixed">Fixed</span></td>
+              <td class="num">6.1</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION 5: Remediation Timeline
+         PATTERN 1: gs-reveal on timeline items
+         ═══════════════════════════════════════════════ -->
+    <h2 class="sec-head" id="s5" data-num="05">Remediation Timeline</h2>
+
+    <div class="timeline">
+      <div class="timeline-item timeline-item--done gs-reveal">
+        <div class="timeline-item__phase">Sprint 22 — Complete</div>
+        <div class="timeline-item__title">Body size limits &amp; audit log extension</div>
+        <div class="timeline-item__desc">
+          Enforced 2MB body limit at WAF (SEC-027). Extended audit log to cover all GET operations (SEC-024).
+          Header sanitisation added to reverse proxy (SEC-019). Token TTL enforcement deployed (SEC-029).
+        </div>
+      </div>
+      <div class="timeline-item timeline-item--done gs-reveal">
+        <div class="timeline-item__phase">Sprint 23 — Complete</div>
+        <div class="timeline-item__title">Rate limiting — partial rollout</div>
+        <div class="timeline-item__desc">
+          Rate limiting deployed to <code style="font-family: var(--font-mono); font-size: 11px;">/api/v2/auth</code> and
+          <code style="font-family: var(--font-mono); font-size: 11px;">/api/v2/users</code>. CORS policy tightened to
+          allowlist on admin namespace (SEC-038 partial). Three endpoints still pending.
+        </div>
+      </div>
+      <div class="timeline-item gs-reveal">
+        <div class="timeline-item__phase">Sprint 24 — In Progress</div>
+        <div class="timeline-item__title">JWT hardening &amp; path traversal fix</div>
+        <div class="timeline-item__desc">
+          Algorithm whitelist enforcement (SEC-041) — implementation in review. Static router path
+          normalisation fix (SEC-035) — targeted for merge by Feb 28. Remaining rate-limit endpoints.
+        </div>
+      </div>
+      <div class="timeline-item timeline-item--next gs-reveal">
+        <div class="timeline-item__phase">Sprint 25 — Planned</div>
+        <div class="timeline-item__title">Verification &amp; regression suite</div>
+        <div class="timeline-item__desc">
+          Full re-scan of all 47 endpoints. Automated regression tests added to CI pipeline.
+          Updated WAF ruleset version lock. Target: A- risk score.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         SECTION 6: Next Steps
+         PATTERN 1: gs-reveal on step cards
+         ═══════════════════════════════════════════════ -->
+    <h2 class="sec-head" id="s6" data-num="06">Next Steps</h2>
+
+    <div class="steps-grid">
+      <div class="ve-card gs-reveal">
+        <div class="step-card">
+          <div class="step-card__num">1</div>
+          <div class="step-card__body">
+            <div class="step-card__title">Merge JWT algorithm whitelist</div>
+            <div class="step-card__desc">
+              PR #1847 targets the gateway's JWT middleware. Requires security team sign-off
+              before merge. Blocks SEC-041 closure.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="step-card">
+          <div class="step-card__num">2</div>
+          <div class="step-card__body">
+            <div class="step-card__title">Complete CORS allowlist migration</div>
+            <div class="step-card__desc">
+              Admin routes still serve wildcard in staging. Coordinating with frontend
+              to confirm origin list before locking down production.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="step-card">
+          <div class="step-card__num">3</div>
+          <div class="step-card__body">
+            <div class="step-card__title">Extend rate limiting coverage</div>
+            <div class="step-card__desc">
+              Apply limits to <code style="font-family: var(--font-mono); font-size: 11px;">/health</code>, <code style="font-family: var(--font-mono); font-size: 11px;">/metrics</code>,
+              and <code style="font-family: var(--font-mono); font-size: 11px;">/version</code>. Low-effort, high-impact.
+              Pair with IP-based sliding window.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="step-card">
+          <div class="step-card__num">4</div>
+          <div class="step-card__body">
+            <div class="step-card__title">Schedule follow-up audit</div>
+            <div class="step-card__desc">
+              Post-Sprint 24 re-scan targeting all open findings. Run automated regression
+              suite in CI. Distribute updated risk score report.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="step-card">
+          <div class="step-card__num">5</div>
+          <div class="step-card__body">
+            <div class="step-card__title">WAF rule version lock</div>
+            <div class="step-card__desc">
+              Pin WAF ruleset to a specific release version in infrastructure config.
+              Add automated alert when upstream rules publish breaking changes.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ve-card gs-reveal">
+        <div class="step-card">
+          <div class="step-card__num">6</div>
+          <div class="step-card__body">
+            <div class="step-card__title">Developer security training</div>
+            <div class="step-card__desc">
+              SEC-041 and SEC-038 stem from missing awareness of JWT and CORS security
+              models. Schedule 1h session for gateway team before Sprint 25.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 80px;"></div>
+
+  </div><!-- /main -->
+</div><!-- /wrap -->
+
+<!-- ══════════════════════════════════════════════════
+     GSAP core + plugins (before </body>)
+     Load order: core → ScrollTrigger → SplitText → DrawSVGPlugin
+     Lenis was loaded in <head> so it's available here
+     ═══════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js"></script>
+
+<!-- Mermaid ESM import (module type required) -->
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // CRITICAL: theme: 'base' is the only theme where themeVariables are fully respected.
+  // Built-in themes (default, dark, forest) ignore most overrides.
+  mermaid.initialize({
+    startOnLoad: false,   // We call mermaid.run() manually for DrawSVG timing
+    theme: 'base',
+    look: 'classic',
+    themeVariables: {
+      // Amber/emerald palette — NOT indigo/violet (forbidden)
+      primaryColor:        isDark ? '#3a2a0a' : '#fef3c7',
+      primaryBorderColor:  isDark ? '#f59e0b' : '#d97706',
+      primaryTextColor:    isDark ? '#faf8f4' : '#1c1917',
+      secondaryColor:      isDark ? '#0a2a1a' : '#d1fae5',
+      secondaryBorderColor: isDark ? '#34d399' : '#059669',
+      secondaryTextColor:  isDark ? '#faf8f4' : '#1c1917',
+      tertiaryColor:       isDark ? '#0a1a2a' : '#e0f2fe',
+      tertiaryBorderColor: isDark ? '#38bdf8' : '#0284c7',
+      tertiaryTextColor:   isDark ? '#faf8f4' : '#1c1917',
+      lineColor:           isDark ? '#a8a29e' : '#78716c',
+      fontSize:            '15px',
+      fontFamily:          'Bricolage Grotesque, system-ui, sans-serif',
+    }
+  });
+
+  // Expose mermaid.run to the main script block below
+  // (module scope is isolated, so we attach to window)
+  window.__mermaidRun = () => mermaid.run();
+</script>
+
+<script>
+(function () {
+  // ══════════════════════════════════════════════════
+  // 1. REDUCED MOTION DETECTION
+  // All animations gated behind this check.
+  // CSS fallback (.gs-reveal opacity:1) handles the visual case.
+  // ══════════════════════════════════════════════════
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Register GSAP plugins
+  gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
+
+  // ══════════════════════════════════════════════════
+  // 2. LENIS INIT + SCROLLTRIGGER SYNC
+  // PATTERN 2: Smooth scroll navigation
+  // autoRaf: false — GSAP's ticker drives Lenis each frame
+  // lerp: 0.08 — balanced smoothness (0.05 = silky, 0.12 = snappy)
+  // ══════════════════════════════════════════════════
+  let lenis = null;
+
+  if (!prefersReduced) {
+    lenis = new Lenis({
+      autoRaf: false,
+      lerp: 0.08,
+      duration: 1.2,
+      orientation: 'vertical',
+      smoothWheel: true,
+    });
+
+    // Keep ScrollTrigger's scroll position in sync with Lenis
+    lenis.on('scroll', ScrollTrigger.update);
+
+    // Tie Lenis into GSAP's ticker — critical for frame-perfect sync
+    gsap.ticker.add((time) => {
+      lenis.raf(time * 1000);
+    });
+
+    // Disable GSAP's lag smoothing — Lenis handles its own timing
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  // ══════════════════════════════════════════════════
+  // 3. SCROLL PROGRESS BAR
+  // PATTERN 6: Thin bar at viewport top, GSAP scrub drives width
+  // scrub: 0.3 adds slight easing without feeling disconnected
+  // ══════════════════════════════════════════════════
+  if (!prefersReduced) {
+    gsap.to('.scroll-progress', {
+      width: '100%',
+      ease: 'none',
+      scrollTrigger: {
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 0.3,
+      },
+    });
+  }
+
+  // ══════════════════════════════════════════════════
+  // 4. SPLITTEXT HERO ANIMATION
+  // PATTERN 3: Split .hero-title into chars, stagger them in from below
+  // SplitText creates .gs-word and .gs-char wrappers (defined in CSS)
+  // ══════════════════════════════════════════════════
+  if (!prefersReduced) {
+    const heroTitle = document.querySelector('.hero-title');
+    if (heroTitle && typeof SplitText !== 'undefined') {
+      const split = new SplitText(heroTitle, {
+        type: 'words,chars',
+        wordsClass: 'gs-word',
+        charsClass: 'gs-char',
+      });
+
+      // Stagger characters in from below with a slight delay for page settle
+      gsap.from(split.chars, {
+        y: 40,
+        opacity: 0,
+        duration: 0.65,
+        ease: 'power3.out',
+        stagger: 0.022,   // 22ms between each character — feels editorial
+        delay: 0.25,
+      });
+    }
+  }
+
+  // ══════════════════════════════════════════════════
+  // 5. SCROLLTRIGGER.BATCH — SECTION REVEALS
+  // PATTERN 1: Batch reveal for .gs-reveal and .gs-reveal-scale
+  // once: true — animate in on first scroll entry, don't reverse
+  // ══════════════════════════════════════════════════
+  if (!prefersReduced) {
+    // Fade-up reveals for cards and prose
+    ScrollTrigger.batch('.gs-reveal', {
+      onEnter: (batch) => {
+        gsap.to(batch, {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+          stagger: 0.08,
+        });
+      },
+      start: 'top 85%',
+      once: true,
+    });
+
+    // Scale-up reveals for KPI cards — back.out gives a subtle "pop"
+    ScrollTrigger.batch('.gs-reveal-scale', {
+      onEnter: (batch) => {
+        gsap.to(batch, {
+          opacity: 1,
+          scale: 1,
+          duration: 0.5,
+          ease: 'back.out(1.4)',
+          stagger: 0.07,
+        });
+      },
+      start: 'top 85%',
+      once: true,
+    });
+  }
+
+  // ══════════════════════════════════════════════════
+  // 6. MERMAID INIT → DRAWSVG PROGRESSIVE REVEAL
+  // PATTERN 4: Run Mermaid, then animate diagram elements
+  // Phase 1: node shapes fade + scale in
+  // Phase 2: node labels appear
+  // Phase 3: edge paths draw from 0% to 100% using DrawSVG
+  // ══════════════════════════════════════════════════
+  function animateMermaidDiagram(wrapSelector) {
+    const wrap = document.querySelector(wrapSelector);
+    if (!wrap) return;
+
+    // Target SVG elements Mermaid renders
+    const edges      = wrap.querySelectorAll('.edge-pattern-solid, .flowchart-link');
+    const nodeShapes = wrap.querySelectorAll('.node rect, .node circle, .node polygon, .node path');
+    const nodeLabels = wrap.querySelectorAll('.nodeLabel');
+
+    if (nodeShapes.length === 0 && edges.length === 0) return;
+
+    // Set initial hidden states for all elements
+    gsap.set(nodeShapes, { opacity: 0, scale: 0.8, transformOrigin: 'center center' });
+    gsap.set(nodeLabels, { opacity: 0 });
+    if (edges.length > 0) {
+      gsap.set(edges, { drawSVG: '0%' });
+    }
+
+    // Scroll-triggered timeline — fires when diagram enters viewport
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: wrap,
+        start: 'top 75%',
+        once: true,
+      },
+    });
+
+    // Phase 1: Node shapes fade in with slight scale
+    tl.to(nodeShapes, {
+      opacity: 1,
+      scale: 1,
+      duration: 0.4,
+      ease: 'power2.out',
+      stagger: 0.07,
+    });
+
+    // Phase 2: Labels appear (offset to overlap with tail of phase 1)
+    tl.to(nodeLabels, {
+      opacity: 1,
+      duration: 0.3,
+      ease: 'power1.out',
+      stagger: 0.05,
+    }, '-=0.2');
+
+    // Phase 3: Edges draw in using DrawSVG
+    if (edges.length > 0) {
+      tl.to(edges, {
+        drawSVG: '100%',
+        duration: 0.9,
+        ease: 'power1.inOut',
+        stagger: 0.12,
+      }, '-=0.1');
+    }
+  }
+
+  // Run Mermaid then trigger the animation
+  // window.__mermaidRun is set by the <script type="module"> block above
+  function initMermaid() {
+    if (typeof window.__mermaidRun === 'function') {
+      window.__mermaidRun().then(() => {
+        if (!prefersReduced) {
+          animateMermaidDiagram('#mermaidWrap');
+        }
+      }).catch(function(err) {
+        // Mermaid render failure — diagram still shows, animation skipped
+        console.warn('Mermaid render error:', err);
+      });
+    } else {
+      // Module not ready yet — retry after a short delay
+      setTimeout(initMermaid, 100);
+    }
+  }
+
+  // Delay Mermaid init slightly to let the module script execute
+  setTimeout(initMermaid, 150);
+
+  // ══════════════════════════════════════════════════
+  // 7. PINNED COMPARISON PANELS
+  // PATTERN 5: Pin the "before" panel while the "after" panel
+  // scrolls in beside it. Pin indicator shows progress.
+  // Only active on viewports > 768px (CSS stacks on mobile).
+  // ══════════════════════════════════════════════════
+  if (window.innerWidth > 768) {
+    const compSection = document.getElementById('pinnedComparison');
+    const beforePanel = document.getElementById('pinnedBefore');
+    const afterPanel  = document.getElementById('pinnedAfter');
+
+    if (compSection && beforePanel && afterPanel) {
+      // Pin the before panel — pinSpacing: false prevents layout shift
+      if (!prefersReduced) {
+        ScrollTrigger.create({
+          trigger: compSection,
+          start: 'top 20%',
+          end: 'bottom 80%',
+          pin: beforePanel,
+          pinSpacing: false,
+        });
+      }
+
+      // Slide the after panel in from the right on scroll entry
+      if (!prefersReduced) {
+        gsap.from(afterPanel, {
+          x: 60,
+          opacity: 0,
+          duration: 0.85,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: afterPanel,
+            start: 'top 80%',
+            once: true,
+          },
+        });
+      }
+
+      // Pin indicator — shows scroll progress through the comparison section
+      const indicator = document.getElementById('pinIndicator');
+      const fill      = document.getElementById('pinFill');
+
+      if (indicator && fill) {
+        ScrollTrigger.create({
+          trigger: compSection,
+          start: 'top 20%',
+          end: 'bottom 80%',
+          onUpdate: (self) => {
+            fill.style.height = (self.progress * 100) + '%';
+          },
+          onToggle: (self) => {
+            indicator.classList.toggle('visible', self.isActive);
+          },
+        });
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════
+  // 8. TOC SMOOTH SCROLL — LENIS (PATTERN 2)
+  // Replace native scrollIntoView with lenis.scrollTo for
+  // consistent cross-browser momentum easing.
+  // Falls back to native smooth scroll if Lenis was skipped.
+  // ══════════════════════════════════════════════════
+  document.querySelectorAll('.toc a').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      const target = document.getElementById(id);
+      if (!target) return;
+
+      if (lenis) {
+        // Lenis smooth scroll with exponential-out easing
+        lenis.scrollTo(target, {
+          offset: -20,
+          duration: 1.2,
+          easing: function(t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); },
+        });
+      } else {
+        // Reduced-motion fallback — instant scroll
+        target.scrollIntoView({ block: 'start' });
+      }
+
+      history.replaceState(null, '', '#' + id);
+    });
+  });
+
+  // ══════════════════════════════════════════════════
+  // 9. SCROLL SPY — TOC active state
+  // IntersectionObserver marks the active TOC link as the user scrolls.
+  // Works unchanged with Lenis (Lenis doesn't affect intersection events).
+  // ══════════════════════════════════════════════════
+  (function() {
+    const toc   = document.getElementById('toc');
+    const links = toc ? toc.querySelectorAll('a') : [];
+    const sections = [];
+
+    links.forEach(function(link) {
+      const id = link.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) sections.push({ id: id, el: el, link: link });
+    });
+
+    const observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          links.forEach(function(l) { l.classList.remove('active'); });
+          const match = sections.find(function(s) { return s.el === entry.target; });
+          if (match) {
+            match.link.classList.add('active');
+            // Auto-scroll active tab into view on mobile
+            if (window.innerWidth <= 1000) {
+              match.link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+          }
+        }
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+
+    sections.forEach(function(s) { observer.observe(s.el); });
+  })();
+
+  // ══════════════════════════════════════════════════
+  // 10. MERMAID ZOOM CONTROLS
+  // From css-patterns.md — add to every .mermaid-wrap.
+  // Ctrl/Cmd+scroll, click-and-drag panning, cursor states.
+  // ══════════════════════════════════════════════════
+  function updateZoomState(wrap) {
+    var target = wrap.querySelector('.mermaid');
+    var zoom = parseFloat(target ? target.dataset.zoom : '1') || 1;
+    wrap.classList.toggle('is-zoomed', zoom > 1);
+  }
+
+  window.zoomDiagram = function(btn, factor) {
+    var wrap   = btn.closest('.mermaid-wrap');
+    var target = wrap.querySelector('.mermaid');
+    if (!target) return;
+    var current = parseFloat(target.dataset.zoom || '1');
+    var next    = Math.min(Math.max(current * factor, 0.3), 5);
+    target.dataset.zoom  = next;
+    target.style.transform = 'scale(' + next + ')';
+    updateZoomState(wrap);
+  };
+
+  window.resetZoom = function(btn) {
+    var wrap   = btn.closest('.mermaid-wrap');
+    var target = wrap.querySelector('.mermaid');
+    if (!target) return;
+    target.dataset.zoom  = '1';
+    target.style.transform = 'scale(1)';
+    updateZoomState(wrap);
+  };
+
+  document.querySelectorAll('.mermaid-wrap').forEach(function(wrap) {
+    // Ctrl/Cmd + scroll to zoom
+    wrap.addEventListener('wheel', function(e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      var target  = wrap.querySelector('.mermaid');
+      if (!target) return;
+      var current = parseFloat(target.dataset.zoom || '1');
+      var factor  = e.deltaY < 0 ? 1.1 : 0.9;
+      var next    = Math.min(Math.max(current * factor, 0.3), 5);
+      target.dataset.zoom  = next;
+      target.style.transform = 'scale(' + next + ')';
+      updateZoomState(wrap);
+    }, { passive: false });
+
+    // Click-and-drag to pan when zoomed in
+    var startX, startY, scrollL, scrollT;
+
+    wrap.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.zoom-controls')) return;
+      var target = wrap.querySelector('.mermaid');
+      if (!target || parseFloat(target.dataset.zoom || '1') <= 1) return;
+      wrap.classList.add('is-panning');
+      startX  = e.clientX;
+      startY  = e.clientY;
+      scrollL = wrap.scrollLeft;
+      scrollT = wrap.scrollTop;
+    });
+
+    window.addEventListener('mousemove', function(e) {
+      if (!wrap.classList.contains('is-panning')) return;
+      wrap.scrollLeft = scrollL - (e.clientX - startX);
+      wrap.scrollTop  = scrollT - (e.clientY - startY);
+    });
+
+    window.addEventListener('mouseup', function() {
+      wrap.classList.remove('is-panning');
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>

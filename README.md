@@ -16,7 +16,7 @@ Ask your agent to explain a system architecture, review a diff, or compare requi
 > /plan-review ~/docs/refactor-plan.md
 ```
 
-Each one produces a single `.html` file with real typography, dark/light theme support, and interactive Mermaid diagrams with zoom and pan. No build step, no dependencies beyond a browser.
+Each one produces a single `.html` file with real typography, dark/light theme support, interactive Mermaid diagrams with zoom and pan, and scroll-driven animations powered by GSAP + Lenis for multi-section narrative pages. No build step, no dependencies beyond a browser.
 
 https://github.com/user-attachments/assets/55ebc81b-8732-40f6-a4b1-7c3781aa96ec
 
@@ -59,7 +59,7 @@ If you have [surf-cli](https://github.com/nicobailon/surf-cli) installed, the sk
 
 The agent loads the skill when you mention diagrams, architecture, flowcharts, schemas, or visualizations. It also kicks in automatically when it's about to dump a complex table in the terminal (4+ rows or 3+ columns) — it renders HTML instead and opens it in the browser. Output goes to `./.agent/diagrams/`.
 
-The skill ships with six prompt templates:
+The skill ships with twelve prompt templates:
 
 | Command | What it does |
 |---------|-------------|
@@ -69,6 +69,12 @@ The skill ships with six prompt templates:
 | `/plan-review` | Compare a plan against the codebase with risk assessment |
 | `/project-recap` | Mental model snapshot for context-switching back to a project |
 | `/fact-check` | Verify accuracy of a review page or plan doc against actual code |
+| `/trace-flow` | Scroll-driven code path walkthrough — pin each layer as a request travels through it |
+| `/changelog-story` | Scrollytelling project timeline with milestone cards and contributor heatmap |
+| `/deep-dive` | Progressive depth exploration — scroll to zoom from overview to implementation detail |
+| `/migration-guide` | Step-by-step animated migration walkthrough with before/after code transforms |
+| `/dependency-explorer` | Scroll-driven dependency graph — progressive depth reveal of transitive chains |
+| `/onboarding-walkthrough` | Guided codebase introduction for new team members at their own scroll pace |
 
 https://github.com/user-attachments/assets/342d3558-5fcf-4fb2-bc03-f0dd5b9e35dc
 
@@ -104,21 +110,23 @@ It generates a full page with before/after architecture diagrams, KPI dashboard,
 SKILL.md (workflow + design principles)
     ↓
 references/           ← agent reads before each generation
-├── css-patterns.md   (layouts, animations, theming, depth tiers)
-├── libraries.md      (Mermaid theming, Chart.js, anime.js, font pairings)
-├── responsive-nav.md (sticky sidebar TOC for multi-section pages)
-└── slide-patterns.md (slide engine, 10 slide types, transitions, presets)
+├── css-patterns.md       (layouts, animations, theming, depth tiers)
+├── libraries.md          (Mermaid theming, Chart.js, GSAP, Lenis, anime.js, font pairings)
+├── responsive-nav.md     (sticky sidebar TOC for multi-section pages)
+├── slide-patterns.md     (slide engine, 10 slide types, transitions, presets)
+└── scroll-animations.md  (GSAP + Lenis scroll reveals, pins, text splits, SVG draw)
     ↓
 templates/            ← agent reads the matching reference template
 ├── architecture.html (CSS Grid cards — terracotta/sage palette)
 ├── mermaid-flowchart.html (Mermaid + ELK — teal/cyan palette)
-├── data-table.html   (tables with KPIs and badges — rose/cranberry palette)
-└── slide-deck.html   (viewport-fit slides — midnight editorial palette)
+├── data-table.html      (tables with KPIs and badges — rose/cranberry palette)
+├── slide-deck.html      (viewport-fit slides — midnight editorial palette)
+└── scroll-showcase.html (GSAP + Lenis scroll-driven — amber/emerald palette)
     ↓
 ./.agent/diagrams/filename.html → opens in browser
 ```
 
-The agent picks an aesthetic direction, reads the right reference template, generates a self-contained HTML file with both light and dark themes, and opens it. The four templates use deliberately different palettes so the agent learns variety rather than defaulting to one look. The skill handles 11 diagram types — Mermaid for anything with connections (flowcharts, sequences, ER, state machines, mind maps), CSS Grid for text-heavy architecture overviews, HTML tables for data, Chart.js for dashboards — and routes to the right approach automatically.
+The agent picks an aesthetic direction, reads the right reference template, generates a self-contained HTML file with both light and dark themes, and opens it. The five templates use deliberately different palettes so the agent learns variety rather than defaulting to one look. The skill handles 13 diagram types — Mermaid for anything with connections (flowcharts, sequences, ER, state machines, mind maps), CSS Grid for text-heavy architecture overviews, HTML tables for data, Chart.js for dashboards, and GSAP ScrollTrigger + Lenis for scroll-driven narrative pages (walkthroughs, migration guides, deep dives) — and routes to the right approach automatically.
 
 To customize the output directory, browser command, or add your own diagram types and CSS patterns, edit the files directly. The agent reads them fresh each time.
 

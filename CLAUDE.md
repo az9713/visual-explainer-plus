@@ -12,14 +12,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 SKILL.md              ← Core skill definition: workflow, diagram types, aesthetics, anti-patterns
 references/
   css-patterns.md     ← Reusable CSS: themes, depth tiers, cards, grids, animations, overflow protection
-  libraries.md        ← CDN libraries: Mermaid theming, Chart.js, anime.js, font pairings
+  libraries.md        ← CDN libraries: Mermaid theming, Chart.js, GSAP, Lenis, anime.js, font pairings
   responsive-nav.md   ← Sticky sidebar TOC for multi-section pages
   slide-patterns.md   ← Slide engine CSS, 10 slide types, transitions, presets
+  scroll-animations.md ← GSAP + Lenis patterns: scroll reveals, pins, text splits, SVG draw, progress bar
 templates/
   architecture.html   ← CSS Grid cards reference (terracotta/sage palette)
   mermaid-flowchart.html ← Mermaid + ELK reference (teal/cyan palette)
   data-table.html     ← HTML tables with KPIs reference (rose/cranberry palette)
   slide-deck.html     ← Viewport-fit slides reference (midnight editorial palette)
+  scroll-showcase.html ← GSAP + Lenis scroll-driven reference (amber/emerald palette)
 prompts/
   *.md                ← Slash command templates (diff-review, plan-review, generate-slides, etc.)
 package.json          ← pi-package metadata for `pi install`
@@ -37,13 +39,18 @@ Templates use deliberately different palettes so the agent learns variety. The s
 
 ## Key Conventions
 
-- **Output is always a single self-contained `.html` file** — no external assets except CDN links (fonts, Mermaid, Chart.js, anime.js)
+- **Output is always a single self-contained `.html` file** — no external assets except CDN links (fonts, Mermaid, Chart.js, GSAP, Lenis, anime.js)
 - **Both light and dark themes required** via CSS custom properties + `prefers-color-scheme`
 - **Card class is `.ve-card`**, never `.node` (Mermaid uses `.node` internally and it causes CSS collisions)
 - **Mermaid must use `theme: 'base'`** with custom `themeVariables` — built-in themes ignore variable overrides
 - **Mermaid zoom controls** (+/−/reset, Ctrl+scroll, drag-to-pan) are required on every `.mermaid-wrap`
 - **Never set `color:` in Mermaid `classDef`** — it hardcodes a value that breaks in the opposite color scheme; use CSS overrides with `var(--text)` instead
 - **Use semi-transparent fills (8-digit hex)** in Mermaid `classDef` for backgrounds that work in both themes
+- **Scroll-triggered reveals for multi-section pages** — use GSAP ScrollTrigger (`gs-reveal` class) instead of CSS load animations for below-the-fold content; content should animate when scrolled into view, not invisibly on load
+- **Lenis smooth scroll** replaces native `scrollIntoView` on scroll-driven pages — sync with ScrollTrigger via the standard integration pattern in `references/scroll-animations.md`
+- **`data-lenis-prevent`** on `.mermaid-wrap` and `.table-scroll` containers — prevents Lenis from hijacking scroll inside zoom/overflow areas
+- **Anti-scroll-jacking** — never remove the user's ability to scroll past a section; pinned sections max 3x viewport height with visible scroll indicators
+- **`prefers-reduced-motion` fallback** — GSAP pages must check `matchMedia('(prefers-reduced-motion: reduce)')` and skip Lenis, skip animations, show all content immediately
 
 ## Anti-Slop Rules (Strictly Enforced)
 

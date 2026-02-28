@@ -700,9 +700,58 @@ Position the parent container as `position: relative` to scope the SVG overlay.
 
 ## Animations
 
-### Staggered Fade-In on Load
+### Scroll-Triggered Reveals (GSAP)
 
-Define the keyframe once, then stagger via a `--i` CSS variable set per element. This approach works regardless of DOM nesting or interleaved non-animated elements (unlike `nth-child` which breaks when siblings aren't all the same type).
+For multi-section pages (4+ sections), use GSAP ScrollTrigger instead of CSS load animations for below-the-fold content. Elements animate as they enter the viewport rather than on page load.
+
+See `./references/scroll-animations.md` for the full pattern library: `gs-reveal` class, batch reveals, pinned panels, hero text splits, Mermaid progressive reveal, and scroll progress bar.
+
+**Quick reference — initial state classes:**
+
+```css
+/* Scroll-triggered fade-up (GSAP handles the animation) */
+.gs-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  will-change: opacity, transform;
+}
+
+/* Scroll-triggered scale-reveal for KPIs */
+.gs-reveal-scale {
+  opacity: 0;
+  transform: scale(0.92);
+  will-change: opacity, transform;
+}
+
+/* Scroll progress bar at top of viewport */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: var(--accent);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-reveal, .gs-reveal-scale {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .scroll-progress { display: none; }
+}
+```
+
+**When to use what:**
+- **Above the fold:** CSS `fadeUp` / `fadeScale` load animations (below)
+- **Below the fold on multi-section pages:** GSAP `gs-reveal` scroll reveals
+- **Single-section pages:** CSS load animations only (no GSAP needed)
+
+### Staggered Fade-In on Load (CSS-Only)
+
+Define the keyframe once, then stagger via a `--i` CSS variable set per element. This approach works regardless of DOM nesting or interleaved non-animated elements (unlike `nth-child` which breaks when siblings aren't all the same type). **Best for above-the-fold content and single-section pages.** For below-the-fold content on multi-section pages, use GSAP scroll reveals instead (see above).
 
 ```css
 @keyframes fadeUp {

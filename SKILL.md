@@ -70,6 +70,10 @@ Vary the choice each time. If the last diagram was dark and technical, make the 
 | Data table | HTML `<table>` | Semantic markup, accessibility, copy-paste behavior |
 | Timeline | CSS (central line + cards) | Simple linear layout doesn't need a layout engine |
 | Dashboard | CSS Grid + Chart.js | Card grid with embedded charts |
+| Scroll-driven walkthrough | GSAP ScrollTrigger + Lenis | Pinned sections, scrub-driven reveals, progressive depth |
+| Code trace / flow narrative | GSAP pin + scrub + DrawSVG | Step-by-step scroll-paced explanation with code highlighting |
+
+**Scroll-driven pages:** For multi-section narrative pages (walkthroughs, migration guides, changelogs, deep dives), use GSAP ScrollTrigger + Lenis for scroll-paced animation. Read `./references/scroll-animations.md` before generating. Key patterns: `gs-reveal` batch reveals for cards, `pin` + `scrub` for comparison panels, SplitText for hero headings, DrawSVG for Mermaid edge progressive reveal, Lenis for smooth TOC navigation. Always check `prefers-reduced-motion` and degrade gracefully.
 
 **Mermaid theming:** Always use `theme: 'base'` with custom `themeVariables` so colors match your page palette. Use `layout: 'elk'` for complex graphs (requires the `@mermaid-js/layout-elk` package — see `./references/libraries.md` for the CDN import). Override Mermaid's SVG classes with CSS for pixel-perfect control. See `./references/libraries.md` for full theming guide.
 
@@ -148,7 +152,7 @@ Put your primary aesthetic in `:root` and the alternate in the media query:
 
 **Surface depth creates hierarchy.** Vary card depth to signal what matters. Hero sections get elevated shadows and accent-tinted backgrounds (`ve-card--hero` pattern). Body content stays flat (default `.ve-card`). Code blocks and secondary content feel recessed (`ve-card--recessed`). See the depth tiers in `./references/css-patterns.md`. Don't make everything elevated — when everything pops, nothing does.
 
-**Animation earns its place.** Staggered fade-ins on page load are almost always worth it — they guide the eye through the diagram's hierarchy. Mix animation types by role: `fadeUp` for cards, `fadeScale` for KPIs and badges, `drawIn` for SVG connectors, `countUp` for hero numbers. Hover transitions on interactive-feeling elements make the diagram feel alive. Always respect `prefers-reduced-motion`. CSS transitions and keyframes handle most cases. For orchestrated multi-element sequences, anime.js via CDN is available (see `./references/libraries.md`).
+**Animation earns its place.** Staggered fade-ins on page load are almost always worth it — they guide the eye through the diagram's hierarchy. Mix animation types by role: `fadeUp` for cards, `fadeScale` for KPIs and badges, `drawIn` for SVG connectors, `countUp` for hero numbers. Hover transitions on interactive-feeling elements make the diagram feel alive. Always respect `prefers-reduced-motion`. CSS transitions and keyframes handle most cases for single-section pages. For multi-section pages (4+ sections), use GSAP ScrollTrigger for scroll-triggered reveals instead of CSS load animations — content below the fold should animate when scrolled into view, not invisibly on load. For narrative/walkthrough pages, use the full GSAP + Lenis stack with pinned sections and scrub-driven animation (see `./references/scroll-animations.md`).
 
 **Forbidden animations:**
 - Animated glowing box-shadows (`@keyframes glow { box-shadow: 0 0 20px... }`) — this is AI slop

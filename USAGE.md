@@ -1,6 +1,6 @@
 # Visual Explainer — Command Usage Guide
 
-A complete guide to using the 6 slash commands and 1 automatic behavior effectively. Covers when to use each, how to invoke them, why they exist, and recommended workflows.
+A complete guide to using the 12 slash commands, scroll-driven animation features, and 1 automatic behavior effectively. Covers when to use each, how to invoke them, why they exist, and recommended workflows.
 
 ---
 
@@ -16,10 +16,29 @@ Ask yourself one question: **What am I trying to understand?**
 | A project I haven't touched in days | `/project-recap` | Rebuilds your mental model from git history |
 | Whether a generated document is accurate | `/fact-check` | Verifies every factual claim against actual code |
 | Presenting any of the above to others | `/generate-slides` or `--slides` | Converts content into a slide deck format |
+| How a request flows through our code | `/trace-flow` | Scroll-driven walkthrough pinning each layer |
+| The arc of a project over weeks/months | `/changelog-story` | Scrollytelling timeline with phases and milestones |
+| A module at multiple zoom levels | `/deep-dive` | Progressive depth — scroll to zoom overview → detail |
+| How to migrate from X to Y | `/migration-guide` | Step-by-step animated before/after code transforms |
+| What our dependency tree looks like | `/dependency-explorer` | Scroll-driven graph with progressive depth reveal |
+| Onboarding a new team member | `/onboarding-walkthrough` | Guided codebase intro at the reader's own scroll pace |
+
+### Static vs. Scroll-Driven Commands
+
+The 12 commands split into two families:
+
+| Family | Commands | Animation model |
+|---|---|---|
+| **Static pages** | `/generate-web-diagram`, `/diff-review`, `/plan-review`, `/project-recap`, `/fact-check`, `/generate-slides` | CSS load animations. Everything visible at once. Scroll to read. |
+| **Scroll-driven pages** | `/trace-flow`, `/changelog-story`, `/deep-dive`, `/migration-guide`, `/dependency-explorer`, `/onboarding-walkthrough` | GSAP + Lenis. Content reveals as you scroll. Pinned sections, scrub-driven animation, progressive disclosure. |
+
+Scroll-driven pages use **GSAP ScrollTrigger** for viewport-based reveals, **Lenis** for smooth scroll with momentum, **SplitText** for editorial heading effects, and **DrawSVG** for SVG path animations. The reader controls pacing with their scroll speed. All scroll-driven pages degrade gracefully to static content when `prefers-reduced-motion` is enabled.
 
 ---
 
-## 1. `/generate-web-diagram` — The Swiss Army Knife
+## Static Page Commands (Original 6)
+
+### 1. `/generate-web-diagram` — The Swiss Army Knife
 
 **What it does:** Takes any topic and produces a styled HTML page with diagrams, tables, or cards.
 
@@ -35,7 +54,7 @@ Ask yourself one question: **What am I trying to understand?**
 /generate-web-diagram comparison of Redis vs Memcached for our session store
 ```
 
-**Why this and not the others:** This is the only command with no opinion about *what* you're diagramming. The other 5 commands all have a specific data-gathering pipeline (git diffs, plan files, etc.). This one is pure "turn my idea into a visual page."
+**Why this and not the others:** This is the only command with no opinion about *what* you're diagramming. The other 11 commands all have a specific data-gathering pipeline (git diffs, plan files, code analysis, etc.). This one is pure "turn my idea into a visual page."
 
 **Rendering approach selection:** The agent automatically picks the rendering approach based on the content:
 
@@ -54,7 +73,7 @@ Ask yourself one question: **What am I trying to understand?**
 
 ---
 
-## 2. `/diff-review` — Post-Coding Review
+### 2. `/diff-review` — Post-Coding Review
 
 **What it does:** Generates a comprehensive visual code review with architecture diagrams, KPI dashboard, Good/Bad/Ugly analysis, decision log, and re-entry context.
 
@@ -137,7 +156,7 @@ Ask yourself one question: **What am I trying to understand?**
 
 ---
 
-## 3. `/plan-review` — Pre-Coding Validation
+### 3. `/plan-review` — Pre-Coding Validation
 
 **What it does:** Takes a plan/spec/RFC document and cross-references every claim against the actual codebase. Produces current vs. planned architecture diagrams, change-by-change breakdown, risk assessment, and gap analysis.
 
@@ -206,7 +225,7 @@ Ask yourself one question: **What am I trying to understand?**
 
 ---
 
-## 4. `/project-recap` — Context Recovery
+### 4. `/project-recap` — Context Recovery
 
 **What it does:** Scans recent git activity and produces a full mental model snapshot: architecture diagram, activity narrative, decision log, state-of-things dashboard, cognitive debt hotspots, and next steps.
 
@@ -282,7 +301,7 @@ Ask yourself one question: **What am I trying to understand?**
 
 ---
 
-## 5. `/fact-check` — Accuracy Verification
+### 5. `/fact-check` — Accuracy Verification
 
 **What it does:** Takes any document that makes claims about code (an HTML review page, a plan doc, a spec) and verifies every single factual claim against the actual codebase. Corrects errors in-place and adds a verification summary.
 
@@ -353,7 +372,7 @@ Ask yourself one question: **What am I trying to understand?**
 
 ---
 
-## 6. `/generate-slides` — Presentation Format
+### 6. `/generate-slides` — Presentation Format
 
 **What it does:** Generates a magazine-quality slide deck as a self-contained HTML page with keyboard/touch/scroll navigation.
 
@@ -416,7 +435,394 @@ Ask yourself one question: **What am I trying to understand?**
 
 ---
 
-## 7. Automatic Table Rendering (No Command Needed)
+## Scroll-Driven Commands (New 6)
+
+These six commands produce pages that use **GSAP ScrollTrigger + Lenis** for scroll-paced animation. Instead of showing everything at once, content reveals progressively as you scroll — pinned sections hold context while related content scrolls in, SVG paths draw to show connections, code highlights shift to show different regions, and depth levels expand as you advance. The reader controls pacing with their scroll speed.
+
+**What makes these different from the static commands:**
+
+| Feature | Static pages | Scroll-driven pages |
+|---|---|---|
+| Animation trigger | Page load | Scroll position |
+| Content visibility | Everything visible immediately | Content reveals as you scroll to it |
+| Pinned sections | None | Key context stays fixed while related content scrolls |
+| Pacing | Reader scans freely | Scroll speed = reading speed |
+| SVG animation | Static or load-animated | Edge paths draw on scroll via DrawSVG |
+| Text effects | CSS fadeUp | SplitText character/word stagger on scroll |
+| Progress feedback | TOC active state only | Scroll progress bar + pin indicators |
+| Smooth scroll | Native `scrollIntoView` | Lenis with momentum easing |
+| Reduced motion | CSS animations disabled | All GSAP animations skipped, content shown immediately |
+
+**Technical stack (all CDN, all free):**
+- **GSAP** core + ScrollTrigger + SplitText + DrawSVGPlugin
+- **Lenis** smooth scroll (2KB)
+- All free since Webflow acquired GreenSock in 2024
+
+---
+
+### 7. `/trace-flow` — Scroll-Driven Code Path Walkthrough
+
+**What it does:** Traces how a request travels through your code — endpoint → middleware → validation → service → database — and presents each layer as a pinned section. You scroll to advance through the layers. The left panel shows code with highlighted lines; the right panel shows the data payload shape at each stage.
+
+**When to use it:**
+- You need to understand or explain how a request flows through your system
+- You're debugging a multi-layer issue and need to see each step
+- You're onboarding someone who needs to trace a critical path
+- You want to document a complex flow for a code review or architecture discussion
+
+**How:**
+```
+/trace-flow "POST /api/orders"
+/trace-flow "POST /api/orders" --entry src/routes/orders.ts
+/trace-flow "user login flow"
+/trace-flow "WebSocket connection lifecycle"
+/trace-flow "background job processing pipeline"
+```
+
+**Arguments:**
+- `$1` (required): The request path or flow to trace. Can be an HTTP endpoint (`"POST /api/orders"`), a descriptive flow name (`"user login flow"`), or any identifiable code path.
+- `--entry <file>` (optional): The entry point file. If not provided, the agent searches for route definitions, handlers, or controllers matching the path.
+
+**Example — tracing an API endpoint:**
+
+```
+/trace-flow "POST /api/orders" --entry src/routes/orders.ts
+```
+
+This produces a page with:
+1. A hero section with "POST /api/orders" in large editorial type (SplitText character animation)
+2. An overview Mermaid flowchart showing all layers at a glance (edges draw in via DrawSVG on scroll)
+3. **Layer 1: Route Handler** — pinned. Left panel shows `orders.ts` with the handler function highlighted. Right panel shows the incoming request shape (`{ items: [...], shipping: {...} }`)
+4. **Layer 2: Auth Middleware** — pinned. Code shifts to show auth check. Payload panel shows the validated user context being attached.
+5. **Layer 3: Validation** — pinned. Schema validation code highlighted. Payload shows validated/transformed shape.
+6. **Layer 4: Order Service** — pinned. Business logic highlighted. Payload shows the constructed order object.
+7. **Layer 5: Database** — pinned. Query code highlighted. Payload shows the SQL/ORM call and return shape.
+8. Error paths section — what happens when auth fails, validation rejects, DB errors
+9. Summary table — all layers with timing, file paths, data transformations
+
+Each pinned layer lasts at most 2x viewport height. A scroll indicator on the right shows progress through each layer. Scrolling is smooth via Lenis.
+
+**Example — tracing a WebSocket lifecycle:**
+
+```
+/trace-flow "WebSocket connection lifecycle"
+```
+
+The agent finds your WebSocket handler, traces the connection → authentication → message handling → disconnection → cleanup path, and presents each phase as a pinned scroll section with relevant code.
+
+**What the agent reads:** It follows function calls from the entry point through each layer, reading every file involved. For each layer, it captures the file path, function name, data shape at entry/exit, key transformations, error handling, and transitions to the next layer.
+
+**Best for:** Backend developers who need to understand or explain request flows, API endpoints, event processing pipelines, or any multi-step code path.
+
+---
+
+### 8. `/changelog-story` — Scrollytelling Project Timeline
+
+**What it does:** Transforms your git history into a narrative timeline. A central SVG line draws downward as you scroll. Milestone cards animate in by phase. Contributor heatmap cells fill over time. The "current date" header pins and updates as you scroll through the timeline.
+
+**When to use it:**
+- You need to present what happened over a sprint/quarter/release cycle
+- You want to understand the *arc* of a project — momentum shifts, pivots, phases
+- You're preparing a retrospective or stakeholder update
+- You want to see contributor activity patterns over time
+
+**How:**
+```
+/changelog-story                   # default: last 3 months
+/changelog-story 2w                # last 2 weeks
+/changelog-story 30d               # last 30 days
+/changelog-story 3m                # last 3 months (explicit)
+/changelog-story 6m                # last 6 months
+/changelog-story 1y                # last year
+```
+
+**Time window parsing:**
+
+| Argument | Parsed as |
+|---|---|
+| *(none)* | `3m` (3 months, the default) |
+| `2w` | `"2 weeks ago"` |
+| `30d` | `"30 days ago"` |
+| `3m` | `"3 months ago"` |
+| `6m` | `"6 months ago"` |
+| `1y` | `"1 year ago"` |
+| Other text | Treated as free-form context, uses default 3m window |
+
+**Example — a quarter retrospective:**
+
+```
+/changelog-story 3m
+```
+
+This produces a page with:
+1. Hero: "3 Months of [Project Name]" (SplitText character animation). KPI cards: 142 commits, 4 contributors, 87 files changed, +3,200 / -1,100 lines
+2. Central SVG timeline that draws downward as you scroll (DrawSVG + scrub)
+3. **Phase 1: "Foundation Sprint" (Jan 5 – Jan 19)** — phase divider pins briefly with SplitText. Milestone cards batch-animate in: "Initial schema design", "Auth module scaffold", "CI pipeline setup". Cards alternate left/right of the timeline.
+4. **Phase 2: "Feature Push" (Jan 20 – Feb 10)** — milestone cards for each major feature commit. Cards show commit hash, files touched, and a one-sentence description of what changed.
+5. **Phase 3: "Stabilization" (Feb 11 – Feb 28)** — bug fixes, test additions, documentation updates. Milestone cards with green-tinted borders.
+6. Sticky "Current Date" header at top updates to show which date you've scrolled to
+7. Contributor heatmap — rows for each contributor, columns for weeks. Cells fill with color intensity as you scroll past them (batch animation).
+8. File activity map — treemap or bars showing which modules got the most attention
+9. Arc summary — narrative capturing where the project was at the start, the momentum shifts, and where it stands now
+
+**Example — a sprint review:**
+
+```
+/changelog-story 2w
+```
+
+Same structure but compressed: fewer phases, daily rather than weekly granularity, focus on individual commits rather than grouped milestones.
+
+**What the agent reads:** Full `git log` with stats for the time window. Contributor activity per date. Tags and version bumps. CHANGELOG.md entries. It analyzes commit messages and timing to identify natural phases.
+
+**Best for:** Engineering managers preparing retrospectives, teams reviewing sprint progress, anyone who wants to see the story behind the commits.
+
+---
+
+### 9. `/deep-dive` — Progressive Depth Module Exploration
+
+**What it does:** Explores a module at 4 zoom levels: bird's eye → components → internals → implementation detail. As you scroll, the diagram literally zooms in — overview nodes expand to reveal internal structure, labels gain detail, new connections draw in. Scroll backward to collapse deeper levels.
+
+**When to use it:**
+- You need to understand a complex module without getting overwhelmed
+- You're writing documentation for a module at multiple audience levels
+- You want a single artifact that works for both newcomers (overview) and implementers (detail)
+- You need to audit a module's internal architecture
+
+**How:**
+```
+/deep-dive src/auth/
+/deep-dive src/auth/ "Authentication Module"
+/deep-dive lib/parser.ts "Query Parser"
+/deep-dive packages/core/ "Core Package"
+```
+
+**Arguments:**
+- `$1` (required): Path to the module or directory to explore
+- `$2` (optional): Display title. If not provided, derived from the module path.
+
+**Example — exploring an auth module:**
+
+```
+/deep-dive src/auth/ "Authentication Module"
+```
+
+This produces a page with:
+1. Hero: "Authentication Module" (SplitText). KPI cards: 8 files, 23 exports, 1,240 lines, 78% test coverage
+2. **Depth 0 — Bird's Eye (pinned, scrub-driven):** The auth module as a single box in a Mermaid diagram. External connections: "HTTP Request" → Auth Module → "User Session". As you scroll, the box opens and transforms into the Depth 1 view.
+3. **Depth 1 — Components (pinned, scrub-driven):** The box has expanded into 4 connected components: `JWTValidator`, `SessionStore`, `PermissionResolver`, `AuthMiddleware`. Connection lines draw in via DrawSVG. Labels show one-line purposes. Scrolling further zooms into each component.
+4. **Depth 2 — Internals:** Key functions and types for each component. `JWTValidator.verify()`, `SessionStore.get()`, `PermissionResolver.check()`. Code snippets with annotations. Data flow arrows showing how a token becomes a validated session.
+5. **Depth 3 — Implementation Detail:** Critical code paths: how JWT expiry is handled (line-by-line annotation in a pinned code panel), the Redis session cache strategy, the permission check algorithm with O(n) complexity note, edge case handling for revoked tokens.
+6. Cross-cutting concerns: error handling strategy (throw vs. return), logging integration, config surface (`JWT_SECRET`, `SESSION_TTL`, `REDIS_URL`)
+7. Summary table: all 23 exports with type, purpose, and which depth level covers them
+
+**The scroll-to-zoom experience:** The transition between depth levels is continuous, not binary. At Depth 0, you see one box. As you scroll, the box's borders dissolve and the Depth 1 components grow outward from its center. Scroll further and each component opens to reveal Depth 2 content. Scroll backward and deeper levels collapse back into their parents. The scrub parameter ties animation progress directly to scroll position.
+
+**Example — a single-file deep dive:**
+
+```
+/deep-dive lib/parser.ts "Query Parser"
+```
+
+Works the same way but with internal functions instead of files: Depth 0 = the parser as a black box, Depth 1 = the parser's major phases (tokenize → parse → transform → emit), Depth 2 = key functions per phase, Depth 3 = implementation details of critical algorithms.
+
+**Best for:** Senior engineers auditing modules, tech leads reviewing architecture, anyone writing or reading documentation at multiple levels of detail.
+
+---
+
+### 10. `/migration-guide` — Step-by-Step Animated Migration
+
+**What it does:** Breaks a migration into ordered steps and presents each as a pinned section with animated code transformations. Removed lines slide out red, added lines slide in green, moved lines physically travel to their new position. A persistent progress bar tracks your position across all steps.
+
+**When to use it:**
+- You're planning or documenting a migration (framework upgrade, API change, pattern refactor)
+- You need developers to follow steps in order without losing their place
+- You want a visual guide that shows *how* code transforms, not just before/after snapshots
+- You're migrating a shared codebase and need a shareable walkthrough
+
+**How:**
+```
+/migration-guide "Express 4 to Express 5"
+/migration-guide "Express 4 to Express 5" --scope src/server/
+/migration-guide "React class components to hooks"
+/migration-guide "CommonJS to ESM" --scope src/lib/
+/migration-guide "Sequelize to Prisma"
+/migration-guide "REST to GraphQL" --scope src/api/
+```
+
+**Arguments:**
+- `$1` (required): Migration description — what you're migrating from and to
+- `--scope <path>` (optional): Directory to focus the analysis on. Without it, the entire project is analyzed.
+
+**Example — Express 4 to Express 5:**
+
+```
+/migration-guide "Express 4 to Express 5" --scope src/server/
+```
+
+This produces a page with:
+1. Hero: "Express 4 → Express 5" (SplitText). KPI cards: 7 steps, 12 files affected, ~340 line changes. Brief description of why this migration matters.
+2. Overview pipeline: all 7 steps as circles on an SVG path, color-coded green/amber/red by risk level. The path draws via DrawSVG as you scroll.
+3. **Step 1: Update package.json (pinned, scrub-driven)**
+   - Step header pins at top: "Step 1 of 7 — Update Dependencies" with green risk badge
+   - Before panel: `"express": "^4.18.2"` highlighted in red
+   - Animated transformation: the version number slides out, `"^5.0.0"` slides in green
+   - Explanation card: "Express 5 requires Node.js 18+. Check your CI and production environment."
+   - Gotcha card (amber): "Express 5 drops `app.del()` — use `app.delete()` instead"
+4. **Step 2: Replace deprecated middleware (pinned)**
+   - Before: `app.use(bodyParser.json())` — line slides out red
+   - After: `app.use(express.json())` — line slides in green
+   - Explanation: "Body-parser was built into Express since 4.16 but 5.x removes the bundled legacy version"
+5. **Step 3: Update error handlers (pinned)** — error handler signature changes from `(err, req, res, next)` behavior
+6. ...continues through all 7 steps...
+7. Persistent progress bar: "Step 3 of 7" tracks position across all pinned sections
+8. Dependency changes table: packages to add, remove, and version-bump
+9. Test updates: what test files need changes
+10. Rollback plan (collapsed `<details>`): how to revert if something goes wrong
+11. Completion checklist: all steps as a reference checklist
+
+**Example — React class to hooks:**
+
+```
+/migration-guide "React class components to hooks"
+```
+
+Steps include: replace `this.state` with `useState`, replace `componentDidMount` with `useEffect`, extract shared logic into custom hooks, update refs from `createRef` to `useRef`, etc. Each step shows actual component code from the project transforming in place.
+
+**The code transformation animation:** Within each pinned step, scrolling drives the transformation. Lines that are being removed slide left and fade with a red tint. Lines being added slide in from the right with a green tint. Lines that *moved* (e.g., a function extracted to a different location) physically travel from their old position to their new one. The scrub parameter ties all animation to scroll position — scroll backward to see the reverse transformation.
+
+**Best for:** Teams executing shared migrations, developers documenting upgrade paths, anyone who needs a follow-along guide that can't be skipped or done out of order.
+
+---
+
+### 11. `/dependency-explorer` — Scroll-Driven Dependency Graph
+
+**What it does:** Starts with your direct dependencies and progressively reveals transitive depth levels as you scroll. Nodes fly outward from parents, connection lines draw in, and the graph expands with each depth level. Scroll backward to collapse deeper levels.
+
+**When to use it:**
+- You need to understand your dependency tree beyond the top level
+- You want to trace why a specific transitive dependency is in your tree
+- You're auditing for duplicate packages, version conflicts, or security vulnerabilities
+- You want to visualize the weight of your dependency chains
+
+**How:**
+```
+/dependency-explorer
+/dependency-explorer --focus lodash
+/dependency-explorer --focus react --depth 4
+/dependency-explorer --dev
+/dependency-explorer --focus express --depth 2
+```
+
+**Arguments:**
+- `--focus <package>` (optional): Highlight a specific package and all paths leading to it
+- `--depth <n>` (optional): Maximum depth to explore (default: 3)
+- `--dev` (optional): Include devDependencies (excluded by default)
+
+**Example — exploring all dependencies:**
+
+```
+/dependency-explorer
+```
+
+This produces a page with:
+1. Hero: "[Project Name] Dependencies" (SplitText). KPI cards: 24 direct deps, 387 total transitive, max depth 7, 3 duplicates, 1 vulnerability
+2. **Depth 0 — Direct dependencies:** Project root in the center with 24 direct dependencies shown as a ring of cards. Each card shows package name, version, and transitive dep count (e.g., "express v4.18.2 — pulls 32 transitive deps").
+3. **Depth 1 (scroll to reveal):** First-level transitive dependencies fly outward from their parent nodes. Connection lines draw in via DrawSVG. `ScrollTrigger.batch()` staggers nodes so they don't appear all at once.
+4. **Depth 2 (scroll further):** Second-level transitives expand the graph. The viewport rescales to fit. Pinning keeps the graph centered while new layers appear within it.
+5. **Depth 3 (scroll further):** Deeper levels continue. Scroll backward to collapse — nodes fade out, connections retract.
+6. Duplicates section: cards highlighting packages at multiple versions, color-coded by conflict severity
+7. Security findings: vulnerability cards with severity badges (critical/high/medium/low)
+8. Heaviest chains: ranked list of dependency chains by total transitive count
+9. Summary table: all direct dependencies with transitive counts, duplicate flags, vulnerability flags
+
+**Example — tracing a specific package:**
+
+```
+/dependency-explorer --focus lodash
+```
+
+Same graph exploration, but after expanding to show lodash's location in the tree, a pinned spotlight section highlights all paths from root → lodash. Unrelated nodes dim to 20% opacity. Trace lines glow to show which direct dependencies are responsible for pulling lodash in. Useful for answering "why is this in my tree and can I remove it?"
+
+**Example — auditing dev dependencies:**
+
+```
+/dependency-explorer --dev
+```
+
+Includes devDependencies in the tree. Useful for auditing test framework chains, build tool dependencies, or understanding why `node_modules` is large.
+
+**Best for:** Platform engineers auditing dependency weight, security engineers tracing vulnerability chains, anyone who's ever wondered "why do we have 400 transitive dependencies?"
+
+---
+
+### 12. `/onboarding-walkthrough` — Guided Codebase Introduction
+
+**What it does:** Creates a scroll-paced guided tour of your codebase for new team members. Each concept section pins and plays its explanation before releasing — enforced scroll pacing ensures comprehension. Code annotation panels highlight different regions as you scroll. The file tree reveals progressively.
+
+**When to use it:**
+- A new developer is joining the team and needs a curated introduction
+- You want to document your codebase's architecture and conventions in an interactive format
+- You need a self-serve onboarding artifact that doesn't require a senior engineer's time
+- You want to replace scattered README + CONTRIBUTING + tribal knowledge with a single walkthrough
+
+**How:**
+```
+/onboarding-walkthrough
+/onboarding-walkthrough --audience "backend developer joining the team"
+/onboarding-walkthrough --audience "frontend intern"
+/onboarding-walkthrough --audience "senior engineer from a different stack"
+/onboarding-walkthrough --focus "API layer"
+/onboarding-walkthrough --audience "new QA engineer" --focus "testing infrastructure"
+```
+
+**Arguments:**
+- `--audience <description>` (optional): Who the walkthrough is for. Adjusts depth and assumed knowledge. Default: mid-level developer.
+- `--focus <area>` (optional): Narrow to a specific area of the codebase. Without it, covers the full codebase.
+
+**Example — full team onboarding:**
+
+```
+/onboarding-walkthrough --audience "backend developer joining the team"
+```
+
+This produces a page with:
+1. Welcome: "[Project Name]" (SplitText). "A backend service that processes payment webhooks and routes them to downstream services." Assumed background: familiar with Node.js/TypeScript, new to this codebase. "By the end, you'll understand: the request lifecycle, how events are processed, the testing strategy, and how to ship your first PR."
+2. **The Big Picture (pinned):** Mermaid architecture diagram showing Webhook Receiver → Event Router → Payment Processor → Notification Service → Database. Labels and connections draw in via DrawSVG. Zoom controls with `data-lenis-prevent`. This diagram stays pinned while the overview text scrolls in beside it.
+3. **Concept 1: The Event Router (pinned section)**
+   - "Event Router" title with SplitText emphasis
+   - "This is the heart of the system. Every incoming webhook passes through here. It determines what kind of event it is and routes it to the right processor."
+   - File tree highlights: `src/router/index.ts`, `src/router/rules.ts`, `src/router/types.ts` animate in via batch reveal
+   - Code walkthrough: `src/router/index.ts` is shown in a pinned panel. As you scroll, different function regions highlight: first `parseEvent()`, then `matchRule()`, then `dispatch()`. Callout cards slide in for each region explaining what it does.
+   - Key rule callout (accent card): "Every event type must have a matching rule in `rules.ts`. Adding a new event type without a rule causes a silent drop."
+4. **Concept 2: Payment Processing (pinned section)** — same structure for the payment processor
+5. **Concept 3: The Notification Pipeline** — same structure
+6. **Concept 4: Error Handling and Retries** — how failed events are retried, dead letter queue
+7. **Concept 5: The Database Layer** — ORM patterns, migration strategy, query patterns
+8. File tree explorer: full project tree reveals directory-by-directory as you scroll. Each directory is color-coded: source (blue), tests (green), config (amber), docs (slate), build (dim).
+9. Development setup: step-by-step pinned checklist — clone, install, copy `.env.example`, run migrations, start dev server, run tests
+10. Common tasks: expandable cards — "How do I add a new event type?", "How do I write a test?", "How do I deploy?"
+11. Patterns and conventions: naming conventions, error handling approach, PR review expectations
+12. Gotchas: amber cards — "The webhook signature verification uses a clock tolerance of 5 minutes. If your local clock is off, verification fails silently." "The `PAYMENT_PROCESSOR_URL` env var must include the `/v2` path prefix — the code doesn't append it."
+13. Where to go next: suggested first tasks based on the audience's role
+
+**Example — focused onboarding:**
+
+```
+/onboarding-walkthrough --focus "API layer" --audience "frontend developer"
+```
+
+Narrower scope: only covers the API layer (endpoints, request/response shapes, auth, rate limiting). Adjusted depth: explains things a frontend developer would need to know (how to call endpoints, what responses look like) rather than backend internals.
+
+**The enforced pacing experience:** Unlike a regular docs page where you can skim and skip, each concept section in the walkthrough *pins* — it holds the viewport while you scroll through its explanation. This isn't scroll-jacking (you can always scroll past), but it creates a natural pace that prevents the common onboarding failure of "I opened the README, skimmed for 30 seconds, and now I'm confused." The pin indicator on the right shows your progress through each concept.
+
+**What the agent reads:** README, CONTRIBUTING, CLAUDE.md, ARCHITECTURE.md, package.json, entry points, key abstractions (types/interfaces/classes), config files, development scripts, recent git activity, TODO/FIXME/HACK comments, and ADRs if they exist.
+
+**Best for:** Team leads onboarding new hires, open source maintainers creating contributor guides, anyone who wants their codebase to be self-documenting in a way that actually works.
+
+---
+
+## 13. Automatic Table Rendering (No Command Needed)
 
 **What it does:** When the skill is loaded and the agent is about to render an ASCII table with 4+ rows or 3+ columns, it automatically generates an HTML page instead.
 
@@ -436,6 +842,40 @@ Ask yourself one question: **What am I trying to understand?**
 - Any structured rows and columns meeting the threshold
 
 **Why:** ASCII tables with pipes and dashes are unreadable beyond trivial sizes. The HTML version gets sticky headers, alternating row backgrounds, row hover highlights, status indicator badges (colored dots, not emoji), responsive horizontal scrolling, column width hints, proper text wrapping, code formatting in cells, and secondary detail text. It's the same content but actually scannable.
+
+---
+
+## Scroll-Driven Animation Features (Infrastructure)
+
+Even when using the original 6 static commands, multi-section pages now benefit from scroll-driven enhancements. These aren't new commands — they're improvements to how existing pages animate and behave.
+
+### What Changed
+
+| Before | After |
+|---|---|
+| All `fadeUp` animations fire on page load, even for content below the fold | Below-the-fold content uses `gs-reveal` — animates when scrolled into view |
+| TOC uses native `scrollIntoView({ behavior: 'smooth' })` with inconsistent browser easing | Lenis smooth scroll with configurable momentum and easing |
+| Page titles use the same fadeUp as everything else | Hero headings use SplitText for editorial character/word stagger |
+| Mermaid diagrams appear fully formed | DrawSVG animates edges drawing in on scroll |
+| Before/after panels scroll past quickly | Pinned comparison panels hold the "before" while "after" scrolls in |
+| No reading progress indication beyond TOC active state | Thin progress bar at viewport top, width driven by scroll position |
+
+### When These Apply
+
+The scroll enhancements apply automatically when the agent generates a multi-section page (4+ sections). Single-section diagrams still use CSS load animations. The agent decides based on content length — you don't need to request it.
+
+### Reduced Motion
+
+All scroll-driven features respect `prefers-reduced-motion: reduce`:
+- Lenis is skipped — native browser scroll is used
+- ScrollTrigger animations are skipped — content is visible immediately
+- SplitText effects are skipped — headings display normally
+- DrawSVG is skipped — SVG paths are fully drawn immediately
+- Pinned sections still pin (pinning is a layout feature) but without animation
+- The scroll progress bar is hidden
+- The page is fully readable without any animation
+
+To test: enable "Reduce motion" in your OS accessibility settings, then reload the page.
 
 ---
 
@@ -480,45 +920,118 @@ Ask yourself one question: **What am I trying to understand?**
 
 **Why this works:** The recap gives you architecture snapshot, decision log, state-of-things dashboard, and cognitive debt hotspots — everything you need to resume productive work without re-reading every file.
 
-### Onboarding Someone
+### Understanding a Complex Flow
 
 ```
-/project-recap 3m                                        # full 3-month context
-/generate-web-diagram our system architecture             # clean architecture visual
+/trace-flow "POST /api/orders" --entry src/routes/orders.ts
 ```
 
-### Validating Any Document
+**Why this over a static diagram:** When a request crosses 5+ layers, a static diagram shows the topology but not the *narrative*. `/trace-flow` pins each layer so you can read the code, see the data shape, and understand the transformation before moving to the next layer. You control the pace.
+
+### Preparing a Sprint Retrospective
 
 ```
-/fact-check ~/docs/any-document-with-code-claims.md      # verify against codebase
+/changelog-story 2w                                      # last sprint
+/changelog-story 3m                                      # full quarter
+```
+
+**Why this over git log:** `git log` is a firehose. `/changelog-story` identifies phases, groups milestones, animates a timeline, and builds a contributor heatmap. It tells the *story* behind the commits — useful for retrospectives, stakeholder updates, and release notes.
+
+### Understanding a Complex Module
+
+```
+/deep-dive src/auth/ "Authentication Module"
+```
+
+**Why this over reading the code:** You *could* read every file in `src/auth/`, but you'd start at an arbitrary depth level and miss the forest for the trees. `/deep-dive` starts at the highest level (what does this module do?) and lets you zoom in progressively. It's the difference between being handed a box of puzzle pieces and being shown the completed puzzle first.
+
+### Planning a Migration
+
+```
+/migration-guide "Express 4 to Express 5" --scope src/server/
+```
+
+**Why this over a written migration doc:** Written migration docs are either too terse (a table of X→Y) or too verbose (20 pages nobody reads). `/migration-guide` is step-by-step with animated code transforms — developers see exactly how their code changes and can follow along at their own pace. The persistent progress bar prevents the common failure of "I lost my place at step 4."
+
+### Auditing Dependencies
+
+```
+/dependency-explorer --focus lodash
+/dependency-explorer --dev
+```
+
+**Why this over `npm ls`:** `npm ls` dumps a tree that's too large to parse visually. `/dependency-explorer` reveals depth levels progressively — you see direct deps first, then expand. The `--focus` flag traces specific packages through the tree. Duplicate and vulnerability detection is built in.
+
+### Onboarding a New Team Member
+
+```
+/onboarding-walkthrough --audience "backend developer joining the team"
+```
+
+**Why this over pointing them at the README:** READMEs are reference docs — they list facts but don't teach. The walkthrough is a guided tour with enforced pacing: each concept pins and explains itself before releasing. It surfaces tribal knowledge (gotchas, naming conventions, implicit contracts) that never makes it into docs.
+
+**For a focused introduction:**
+```
+/onboarding-walkthrough --focus "API layer" --audience "frontend developer"
 ```
 
 ### The Full Feature Lifecycle
 
 ```
-# 1. Understand
-/generate-web-diagram the system I'm about to change
+# 1. Understand the codebase
+/deep-dive src/payments/ "Payment Module"
 
-# 2. Plan
+# 2. Understand the current state
+/generate-web-diagram the payment processing pipeline
+
+# 3. Plan
 # ... write your plan ...
 /plan-review ~/plan.md
 
-# 3. Build
+# 4. Build
 # ... implement the feature ...
 
-# 4. Review
+# 5. Review
 /diff-review
 /fact-check
 
-# 5. Present
+# 6. Document the flow
+/trace-flow "POST /api/payments/charge"
+
+# 7. Prepare migration guide (if breaking changes)
+/migration-guide "Payment API v1 to v2" --scope src/payments/
+
+# 8. Present
 /diff-review --slides
+
+# 9. Onboard others
+/onboarding-walkthrough --focus "payments" --audience "new backend engineer"
+```
+
+### Onboarding a Complete Team
+
+```
+# 1. Full codebase walkthrough
+/onboarding-walkthrough --audience "mid-level developer joining the team"
+
+# 2. Project history and context
+/changelog-story 3m
+
+# 3. Deep dive into the most complex module
+/deep-dive src/core/ "Core Engine"
+
+# 4. Key API flow walkthrough
+/trace-flow "POST /api/main-endpoint"
+
+# 5. Dependency landscape
+/dependency-explorer
 ```
 
 ---
 
 ## Output Location
 
-All generated HTML files are written to `./.agent/diagrams/` with descriptive filenames based on content (e.g., `auth-architecture.html`, `diff-review-feature-branch.html`). The agent opens them in your browser automatically and tells you the file path so you can re-open or share them.
+All generated HTML files are written to `./.agent/diagrams/` with descriptive filenames based on content (e.g., `auth-architecture.html`, `diff-review-feature-branch.html`, `trace-flow-post-api-orders.html`). The agent opens them in your browser automatically and tells you the file path so you can re-open or share them.
 
 The directory persists across sessions.
 
@@ -533,9 +1046,9 @@ This means the full repository — `SKILL.md`, `references/`, and `templates/` �
 | Location | Contents | Purpose |
 |---|---|---|
 | `SKILL.md` | Core workflow, diagram types, anti-slop rules | Agent reads this to know how to generate |
-| `references/` | CSS patterns, Mermaid theming, font pairings, nav, slides | Agent reads before each generation for concrete code patterns |
-| `templates/` | 4 HTML reference files with distinct palettes | Agent reads the matching template to absorb layout and style |
-| `prompts/` | 6 markdown prompt templates | Copied to `.claude/commands/` to register as slash commands |
+| `references/` | CSS patterns, Mermaid theming, font pairings, nav, slides, scroll animations | Agent reads before each generation for concrete code patterns |
+| `templates/` | 5 HTML reference files with distinct palettes | Agent reads the matching template to absorb layout and style |
+| `prompts/` | 12 markdown prompt templates | Copied to `.claude/commands/` to register as slash commands |
 | `.claude/commands/` | Copies of `prompts/*.md` | Where Claude Code discovers slash commands |
 
 ### How it works in practice
@@ -552,3 +1065,23 @@ cp ~/.claude/skills/visual-explainer/prompts/*.md ~/.claude/commands/
 ```
 
 In this setup, the relative paths in the commands (e.g., `./references/css-patterns.md`) will not resolve from an arbitrary project directory. The agent falls back to reading from the skill's install location if it can find it, or generates from memory if it cannot. Output quality is highest when the reference files are accessible.
+
+---
+
+## Quick Reference Card
+
+| Command | One-liner | Key argument |
+|---|---|---|
+| `/generate-web-diagram` | Turn any topic into a visual HTML page | Topic description |
+| `/diff-review` | Visual code review with decision log | Git ref (default: `main`) |
+| `/plan-review` | Validate a plan against real code | Path to plan file |
+| `/project-recap` | Rebuild mental model from git history | Time window (default: `2w`) |
+| `/fact-check` | Verify factual accuracy of a document | Path to file (default: latest) |
+| `/generate-slides` | Magazine-quality slide deck | Topic description |
+| `/trace-flow` | Scroll-driven request path walkthrough | Request path + optional `--entry` |
+| `/changelog-story` | Scrollytelling project timeline | Time window (default: `3m`) |
+| `/deep-dive` | Progressive depth module exploration | Module path + optional title |
+| `/migration-guide` | Animated step-by-step migration | Migration description + optional `--scope` |
+| `/dependency-explorer` | Scroll-driven dependency graph | Optional `--focus`, `--depth`, `--dev` |
+| `/onboarding-walkthrough` | Guided codebase introduction | Optional `--audience`, `--focus` |
+| `--slides` | Add to any command for slide deck output | Flag on existing commands |
