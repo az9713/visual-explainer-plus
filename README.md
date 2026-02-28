@@ -19,8 +19,7 @@
 - **New reference template** (`templates/scroll-showcase.html`) demonstrating all scroll animation patterns
 - **Extended documentation** — see [`docs/USAGE.md`](docs/USAGE.md) for the full command guide with examples
 
-<!-- TODO: Replace with uploaded video URL -->
-https://github.com/user-attachments/assets/VIDEO_PLACEHOLDER
+https://github.com/user-attachments/assets/ebb7d152-a98d-460a-bbb0-e5abfeabb8b2
 
 ---
 
