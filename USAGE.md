@@ -521,3 +521,34 @@ Ask yourself one question: **What am I trying to understand?**
 All generated HTML files are written to `./.agent/diagrams/` with descriptive filenames based on content (e.g., `auth-architecture.html`, `diff-review-feature-branch.html`). The agent opens them in your browser automatically and tells you the file path so you can re-open or share them.
 
 The directory persists across sessions.
+
+## Path Resolution
+
+The slash commands in `prompts/` (copied to `.claude/commands/`) reference skill files using **relative paths** like `./references/css-patterns.md` and `./templates/architecture.html`. These paths resolve relative to your **working directory** (where you launched Claude Code), not relative to where the command file lives.
+
+This means the full repository — `SKILL.md`, `references/`, and `templates/` — must be present in your working directory for the commands to work correctly. The prompt files alone are not sufficient; they are entry points that tell the agent *what* to read, while the references and templates are *what gets read*.
+
+### What lives where
+
+| Location | Contents | Purpose |
+|---|---|---|
+| `SKILL.md` | Core workflow, diagram types, anti-slop rules | Agent reads this to know how to generate |
+| `references/` | CSS patterns, Mermaid theming, font pairings, nav, slides | Agent reads before each generation for concrete code patterns |
+| `templates/` | 4 HTML reference files with distinct palettes | Agent reads the matching template to absorb layout and style |
+| `prompts/` | 6 markdown prompt templates | Copied to `.claude/commands/` to register as slash commands |
+| `.claude/commands/` | Copies of `prompts/*.md` | Where Claude Code discovers slash commands |
+
+### How it works in practice
+
+**Working inside the skill repo** (development or learning): paths resolve automatically because `./references/` and `./templates/` are right there.
+
+**Installed via `pi install` or `git clone` to a skills directory**: the package manager or install script handles path resolution. The skill files live in the skills directory and the agent knows where to find them.
+
+**Manual install to a separate project**: clone the full repo somewhere accessible and copy only the prompts:
+
+```bash
+git clone https://github.com/nicobailon/visual-explainer.git ~/.claude/skills/visual-explainer
+cp ~/.claude/skills/visual-explainer/prompts/*.md ~/.claude/commands/
+```
+
+In this setup, the relative paths in the commands (e.g., `./references/css-patterns.md`) will not resolve from an arbitrary project directory. The agent falls back to reading from the skill's install location if it can find it, or generates from memory if it cannot. Output quality is highest when the reference files are accessible.
