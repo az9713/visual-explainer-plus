@@ -2,11 +2,27 @@
   <img src="banner.png" alt="visual-explainer" width="1100">
 </p>
 
-# visual-explainer
+# visual-explain++
 
-**An agent skill that turns complex terminal output into styled HTML pages you actually want to read.**
+> **Fork of [nicobailon/visual-explainer](https://github.com/nicobailon/visual-explainer)** with 6 additional scroll-driven slash commands, scroll animation infrastructure powered by [Lenis](https://github.com/darkroomengineering/lenis) + [GSAP](https://github.com/greensock/GSAP), and extended documentation.
+
+**An agent skill that turns complex terminal output into styled HTML pages you actually want to read — now with scroll-driven animations.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+### What's new in this fork
+
+- **6 new scroll-driven commands:** `/trace-flow`, `/changelog-story`, `/deep-dive`, `/migration-guide`, `/dependency-explorer`, `/onboarding-walkthrough`
+- **[GSAP](https://github.com/greensock/GSAP) ScrollTrigger + SplitText + DrawSVG** — scroll-position-driven animation, pinned sections, editorial text reveals, progressive SVG path drawing
+- **[Lenis](https://github.com/darkroomengineering/lenis)** smooth scroll — momentum-based scrolling synced with GSAP for jank-free scroll-driven pages
+- **Scroll-triggered reveals** for all multi-section pages (existing commands included) — below-the-fold content animates on scroll instead of invisibly on load
+- **New reference template** (`templates/scroll-showcase.html`) demonstrating all scroll animation patterns
+- **Extended documentation** — see [`docs/USAGE.md`](docs/USAGE.md) for the full command guide with examples
+
+<!-- TODO: Replace with uploaded video URL -->
+https://github.com/user-attachments/assets/VIDEO_PLACEHOLDER
+
+---
 
 Ask your agent to explain a system architecture, review a diff, or compare requirements against a plan. Instead of ASCII art and box-drawing tables, it generates a self-contained HTML page and opens it in your browser:
 
@@ -32,13 +48,13 @@ Tables are worse. Ask the agent to compare 15 requirements against a plan and yo
 
 ```bash
 # Installs the skill and all slash commands in one step
-pi install https://github.com/nicobailon/visual-explainer
+pi install https://github.com/az9713/visual-explainer-plus
 ```
 
 If you prefer a manual install, clone the repo and copy the prompts:
 
 ```bash
-git clone https://github.com/nicobailon/visual-explainer.git ~/.pi/agent/skills/visual-explainer
+git clone https://github.com/az9713/visual-explainer-plus.git ~/.pi/agent/skills/visual-explainer
 mkdir -p ~/.pi/agent/prompts
 cp ~/.pi/agent/skills/visual-explainer/prompts/*.md ~/.pi/agent/prompts/
 ```
@@ -48,7 +64,7 @@ cp ~/.pi/agent/skills/visual-explainer/prompts/*.md ~/.pi/agent/prompts/
 Clone the skill, then copy the prompt templates so they register as slash commands:
 
 ```bash
-git clone https://github.com/nicobailon/visual-explainer.git ~/.claude/skills/visual-explainer
+git clone https://github.com/az9713/visual-explainer-plus.git ~/.claude/skills/visual-explainer
 mkdir -p ~/.claude/commands
 cp ~/.claude/skills/visual-explainer/prompts/*.md ~/.claude/commands/
 ```
@@ -159,7 +175,7 @@ All GSAP plugins are **free** — Webflow acquired GreenSock in 2024 and removed
 
 All scroll-driven pages degrade gracefully when `prefers-reduced-motion` is enabled — content displays immediately without animation, and the page is fully readable.
 
-See [`USAGE.md`](USAGE.md#understanding-gsap-and-lenis) for a detailed breakdown of what each GSAP feature does, how Lenis integrates, and per-command feature tables.
+See [`docs/USAGE.md`](docs/USAGE.md#understanding-gsap-and-lenis) for a detailed breakdown of what each GSAP feature does, how Lenis integrates, and per-command feature tables.
 
 ## Limitations
 
@@ -169,7 +185,9 @@ See [`USAGE.md`](USAGE.md#understanding-gsap-and-lenis) for a detailed breakdown
 
 ## Credits
 
-Borrows ideas from [Anthropic's frontend-design skill](https://github.com/anthropics/skills) and [interface-design](https://github.com/Dammyjay93/interface-design), adapted for one-shot diagram generation.
+Forked from [nicobailon/visual-explainer](https://github.com/nicobailon/visual-explainer). Scroll-driven animation enhancements powered by [GSAP](https://github.com/greensock/GSAP) and [Lenis](https://github.com/darkroomengineering/lenis).
+
+Original project borrows ideas from [Anthropic's frontend-design skill](https://github.com/anthropics/skills) and [interface-design](https://github.com/Dammyjay93/interface-design), adapted for one-shot diagram generation.
 
 ## License
 
