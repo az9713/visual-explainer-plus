@@ -37,6 +37,17 @@ The agent follows a 4-step workflow defined in `SKILL.md`:
 
 Templates use deliberately different palettes so the agent learns variety. The skill routes to the right rendering approach per diagram type (Mermaid for connections, CSS Grid for text-heavy cards, HTML tables for data, Chart.js for dashboards).
 
+## GSAP + Lenis (Scroll Animation Stack)
+
+Six of the twelve slash commands produce **scroll-driven pages** where content reveals as the reader scrolls. These use two libraries loaded from CDN:
+
+- **GSAP** (GreenSock Animation Platform) — the animation engine. Four components: **Core** (tweens/timelines), **ScrollTrigger** (viewport-based triggers, `pin` to hold sections fixed, `scrub` to tie animation to scroll position), **SplitText** (split headings into chars for staggered reveals), **DrawSVGPlugin** (animate SVG path drawing). All free since Webflow's 2024 acquisition.
+- **Lenis** (2 KB) — smooth scroll physics. Replaces native scroll with momentum-based scrolling. Syncs with GSAP's ticker for jank-free scroll-driven animation. Disabled when `prefers-reduced-motion` is enabled.
+
+The scroll-driven commands (`/trace-flow`, `/changelog-story`, `/deep-dive`, `/migration-guide`, `/dependency-explorer`, `/onboarding-walkthrough`) use the full GSAP + Lenis stack. The original static commands (`/diff-review`, `/project-recap`, etc.) use ScrollTrigger `batch` + Lenis only on multi-section pages (4+ sections). `/generate-slides` and `/fact-check` don't use either.
+
+Reference patterns are in `references/scroll-animations.md`. The reference template is `templates/scroll-showcase.html`.
+
 ## Key Conventions
 
 - **Output is always a single self-contained `.html` file** — no external assets except CDN links (fonts, Mermaid, Chart.js, GSAP, Lenis, anime.js)

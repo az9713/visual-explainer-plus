@@ -73,7 +73,19 @@ Vary the choice each time. If the last diagram was dark and technical, make the 
 | Scroll-driven walkthrough | GSAP ScrollTrigger + Lenis | Pinned sections, scrub-driven reveals, progressive depth |
 | Code trace / flow narrative | GSAP pin + scrub + DrawSVG | Step-by-step scroll-paced explanation with code highlighting |
 
-**Scroll-driven pages:** For multi-section narrative pages (walkthroughs, migration guides, changelogs, deep dives), use GSAP ScrollTrigger + Lenis for scroll-paced animation. Read `./references/scroll-animations.md` before generating. Key patterns: `gs-reveal` batch reveals for cards, `pin` + `scrub` for comparison panels, SplitText for hero headings, DrawSVG for Mermaid edge progressive reveal, Lenis for smooth TOC navigation. Always check `prefers-reduced-motion` and degrade gracefully.
+**Scroll-driven pages (GSAP + Lenis):** For multi-section narrative pages (walkthroughs, migration guides, changelogs, deep dives), use GSAP ScrollTrigger + Lenis for scroll-paced animation. Read `./references/scroll-animations.md` before generating.
+
+**GSAP** (GreenSock Animation Platform) is the animation engine — it controls *what happens* as the user scrolls. Four components are used:
+- **GSAP Core** — animation engine (tweens, timelines, easing)
+- **ScrollTrigger** — ties animations to scroll position. Three modes: `batch` (animate elements when they enter viewport), `pin` (hold a section fixed while user scrolls), `scrub` (map animation progress to scroll position — scroll 50% = animation at 50%)
+- **SplitText** — splits headings into characters/words for staggered editorial reveals
+- **DrawSVGPlugin** — animates SVG path `stroke-dashoffset` so lines appear to draw themselves
+
+**Lenis** (2 KB) is the scroll physics layer — it controls *how* the page scrolls. Replaces native browser scroll with smooth momentum-based scrolling. Syncs with GSAP's ticker for jank-free animation. Must be disabled when `prefers-reduced-motion` is enabled.
+
+All GSAP plugins are free (Webflow acquired GreenSock in 2024, removed all paywalls). Loaded from public CDN. Total overhead: ~55 KB (~18 KB gzipped).
+
+**Key patterns:** `gs-reveal` batch reveals for cards, `pin` + `scrub` for comparison panels, SplitText for hero headings, DrawSVG for Mermaid edge progressive reveal, Lenis for smooth TOC navigation. Always check `prefers-reduced-motion` and degrade gracefully. After Mermaid renders asynchronously, call `ScrollTrigger.refresh()` to recalculate batch trigger positions — without this, elements below diagrams may fail to animate on first scroll.
 
 **Mermaid theming:** Always use `theme: 'base'` with custom `themeVariables` so colors match your page palette. Use `layout: 'elk'` for complex graphs (requires the `@mermaid-js/layout-elk` package — see `./references/libraries.md` for the CDN import). Override Mermaid's SVG classes with CSS for pixel-perfect control. See `./references/libraries.md` for full theming guide.
 

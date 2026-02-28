@@ -36,6 +36,136 @@ Scroll-driven pages use **GSAP ScrollTrigger** for viewport-based reveals, **Len
 
 ---
 
+## Understanding GSAP and Lenis
+
+The scroll-driven commands rely on two libraries — **GSAP** and **Lenis** — that work together to create pages where the reader's scroll wheel controls the animation. This section explains what they are, why they're here, and exactly what role each plays across the 12 commands.
+
+### What is GSAP?
+
+**GSAP** (GreenSock Animation Platform) is a JavaScript animation library used on over 12 million websites. It's the industry standard for high-performance web animation — used by Google, Apple, NASA, and most major creative agencies. Unlike CSS animations (which fire once on page load), GSAP can tie animations to scroll position, split text into individually animatable characters, draw SVG paths progressively, and pin sections in place while content scrolls around them.
+
+**All GSAP plugins are free.** Webflow acquired GreenSock in 2024 and removed all paywalls. SplitText and DrawSVGPlugin (previously $99+/year) are now available on public CDN at no cost.
+
+The visual-explainer skill uses four GSAP components:
+
+| Component | CDN size | What it does | Where it's used |
+|---|---|---|---|
+| **GSAP Core** | 27 KB | Animation engine — tweens, timelines, easing | Every scroll-driven page |
+| **ScrollTrigger** | 14 KB | Triggers animations based on scroll position — viewport entry, scrub (scroll-position-driven progress), and pin (section stays fixed while user scrolls) | Every scroll-driven page + multi-section static pages |
+| **SplitText** | 8 KB | Splits headings into individual words/characters so each can be animated independently — creates editorial-quality text reveals | Hero headings on all scroll-driven pages |
+| **DrawSVGPlugin** | 4 KB | Animates SVG `stroke-dashoffset` — makes lines and paths appear to "draw" themselves | Mermaid diagram edge reveals, timeline lines, step connectors |
+
+### What is Lenis?
+
+**Lenis** is a smooth scroll library (2 KB) that replaces the browser's native scroll behavior with buttery momentum-based scrolling. When you release the scroll wheel, the page continues gliding and decelerates naturally instead of stopping abruptly. It's the same scroll feel you experience on Apple.com, Linear, and other polished marketing sites.
+
+**Why Lenis and not just native scroll?** Three reasons:
+
+1. **Consistent cross-browser behavior.** Native `scrollIntoView({ behavior: 'smooth' })` uses different easing curves on Chrome, Firefox, and Safari. Lenis makes TOC navigation feel identical everywhere.
+
+2. **GSAP sync.** Lenis feeds its scroll position into GSAP's animation ticker via a standard integration pattern. This means ScrollTrigger animations are perfectly synchronized with the scroll — no jank, no desync between scroll position and animation state.
+
+3. **Momentum.** When the user flicks the scroll wheel, the page has physical weight. It doesn't stop dead. This makes long scroll-driven pages (like `/changelog-story` timelines or `/onboarding-walkthrough` concept sequences) feel responsive rather than mechanical.
+
+**Lenis is disabled** when the user has `prefers-reduced-motion: reduce` enabled in their OS. The page falls back to native browser scroll.
+
+### How They Work Together
+
+The integration pattern is the same in every scroll-driven page:
+
+```javascript
+// Lenis handles the scroll physics (momentum, easing)
+const lenis = new Lenis({ autoRaf: false, lerp: 0.08 });
+
+// Lenis feeds its scroll position to GSAP's ScrollTrigger
+lenis.on('scroll', ScrollTrigger.update);
+
+// GSAP's ticker drives Lenis's animation frame
+gsap.ticker.add((time) => lenis.raf(time * 1000));
+gsap.ticker.lagSmoothing(0);
+```
+
+**Lenis** controls *how* the page scrolls (smooth momentum). **GSAP** controls *what happens* as the page scrolls (animations, pins, reveals). Together they create the scroll-driven experience.
+
+### Which Features Each Command Uses
+
+Not every command uses every feature. Here's the exact breakdown:
+
+| Command | ScrollTrigger `batch` | ScrollTrigger `pin` | ScrollTrigger `scrub` | SplitText | DrawSVG | Lenis |
+|---|---|---|---|---|---|---|
+| `/generate-web-diagram` | On multi-section pages | — | — | — | — | On multi-section pages |
+| `/diff-review` | On multi-section pages | Pinned comparison panels | — | — | — | On multi-section pages |
+| `/plan-review` | On multi-section pages | Pinned comparison panels | — | — | — | On multi-section pages |
+| `/project-recap` | On multi-section pages | — | — | — | — | On multi-section pages |
+| `/fact-check` | — | — | — | — | — | — |
+| `/generate-slides` | — | — | — | — | — | — |
+| `/trace-flow` | Card reveals | Each system layer | Code highlighting | Hero heading | Layer connection lines | Smooth TOC + scroll |
+| `/changelog-story` | Milestone card groups | Phase dividers | Timeline draw progress | Hero heading + phase titles | Central timeline line | Smooth TOC + scroll |
+| `/deep-dive` | Node reveals per depth | Depth level transitions | Zoom between depths | Hero heading + key terms | Mermaid edge reveals | Smooth TOC + scroll |
+| `/migration-guide` | Non-pinned content | Each migration step | Code line transforms | Hero heading + step titles | Step connector SVG path | Smooth TOC + scroll |
+| `/dependency-explorer` | Nodes per depth level | Graph during expansion | Depth level reveals | Hero heading | Connection lines between nodes | Smooth TOC + scroll |
+| `/onboarding-walkthrough` | File tree + card reveals | Each concept section | Code annotation panels | Hero heading + key terms | Architecture diagram edges | Smooth TOC + scroll |
+
+**Key observations from this table:**
+
+- **`/fact-check` and `/generate-slides`** don't use GSAP or Lenis at all — `/fact-check` edits files in place (no HTML output), and `/generate-slides` uses its own viewport-fit slide engine.
+- **The original 6 static commands** use ScrollTrigger `batch` and Lenis only when they produce pages with 4+ sections. Single-section diagrams still use CSS-only load animations.
+- **All 6 new scroll-driven commands** use the full GSAP + Lenis stack: batch reveals for cards, pin + scrub for their core interaction pattern, SplitText on headings, DrawSVG on SVG paths, and Lenis for smooth scroll.
+- **`scrub`** is the key differentiator between static and scroll-driven pages. Scrub ties animation progress directly to scroll position — scroll 50% through a section and the animation is at 50%. This is what makes code highlighting follow your scroll, depth levels zoom continuously, and timeline paths draw proportionally.
+
+### What Each GSAP Feature Looks Like in Practice
+
+**`ScrollTrigger.batch()` — viewport entry reveals:**
+When you scroll a section of cards into view, they don't just appear — they stagger in one after another with a subtle fade-up. The batch groups elements that enter the viewport at the same time and animates them with a configurable stagger delay. This is the `.gs-reveal` class you see in generated HTML.
+
+**`ScrollTrigger.create({ pin: true })` — pinned sections:**
+A section stays fixed in the viewport while you continue scrolling. The surrounding content scrolls around it. This is how `/trace-flow` holds a code panel in place while explanation cards scroll in, how `/migration-guide` holds a "before" code panel while the transformation animates, and how `/onboarding-walkthrough` holds each concept until you've scrolled through its explanation.
+
+**`ScrollTrigger.create({ scrub: true })` — scroll-position-driven animation:**
+Instead of playing an animation on enter and forgetting about it, scrub ties the animation's progress to your exact scroll position. Scroll to 30% of the section? Animation is at 30%. Scroll backward? Animation reverses. This is what makes the `/deep-dive` zoom transitions feel continuous rather than binary, and what makes `/migration-guide` code transforms respond to scroll direction.
+
+**`SplitText` — editorial text reveals:**
+Takes a heading like "Authentication Module" and splits it into individual characters or words. Each character can then be animated independently — creating the staggered entrance effect where letters appear one after another. Used on hero headings across all scroll-driven pages. The effect takes 0.6–1.0 seconds on page load.
+
+**`DrawSVGPlugin` — SVG path drawing:**
+Makes SVG paths (lines, curves, connections) appear to draw themselves progressively. Used for Mermaid diagram edges (nodes appear first, then connection lines draw between them), timeline center lines (the `/changelog-story` vertical line draws as you scroll), and step connector paths (the `/migration-guide` pipeline visualization).
+
+### CDN Links (All Free)
+
+Every scroll-driven page loads these from CDN — no install, no build step, no license cost:
+
+```html
+<!-- Lenis smooth scroll (2 KB) -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.17/dist/lenis.min.js"></script>
+
+<!-- GSAP core + plugins (53 KB total) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js"></script>
+```
+
+Total overhead: ~55 KB (gzipped: ~18 KB). For context, a single hero image is typically 50–200 KB.
+
+### Accessibility: `prefers-reduced-motion`
+
+Every scroll-driven page checks the user's motion preference:
+
+```javascript
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+```
+
+When reduced motion is enabled:
+- **Lenis** is not initialized — native browser scroll is used
+- **ScrollTrigger batch/pin/scrub** animations are skipped — content is visible immediately with no animation
+- **SplitText** effects are skipped — headings render normally
+- **DrawSVG** is skipped — SVG paths display fully drawn
+- **The page is fully readable** — all content is shown, all sections are navigable, nothing is hidden behind scroll interaction
+
+This is not a degraded experience — it's an alternative presentation that respects the user's preference. The information is identical; only the motion is removed.
+
+---
+
 ## Static Page Commands (Original 6)
 
 ### 1. `/generate-web-diagram` — The Swiss Army Knife
@@ -439,6 +569,8 @@ Scroll-driven pages use **GSAP ScrollTrigger** for viewport-based reveals, **Len
 
 These six commands produce pages that use **GSAP ScrollTrigger + Lenis** for scroll-paced animation. Instead of showing everything at once, content reveals progressively as you scroll — pinned sections hold context while related content scrolls in, SVG paths draw to show connections, code highlights shift to show different regions, and depth levels expand as you advance. The reader controls pacing with their scroll speed.
 
+> **New to GSAP and Lenis?** See the [Understanding GSAP and Lenis](#understanding-gsap-and-lenis) section above for a full explanation of what these libraries are, why they're used, which features each command uses, and how they degrade for accessibility.
+
 **What makes these different from the static commands:**
 
 | Feature | Static pages | Scroll-driven pages |
@@ -452,11 +584,6 @@ These six commands produce pages that use **GSAP ScrollTrigger + Lenis** for scr
 | Progress feedback | TOC active state only | Scroll progress bar + pin indicators |
 | Smooth scroll | Native `scrollIntoView` | Lenis with momentum easing |
 | Reduced motion | CSS animations disabled | All GSAP animations skipped, content shown immediately |
-
-**Technical stack (all CDN, all free):**
-- **GSAP** core + ScrollTrigger + SplitText + DrawSVGPlugin
-- **Lenis** smooth scroll (2KB)
-- All free since Webflow acquired GreenSock in 2024
 
 ---
 
@@ -847,7 +974,7 @@ Narrower scope: only covers the API layer (endpoints, request/response shapes, a
 
 ## Scroll-Driven Animation Features (Infrastructure)
 
-Even when using the original 6 static commands, multi-section pages now benefit from scroll-driven enhancements. These aren't new commands — they're improvements to how existing pages animate and behave.
+Even when using the original 6 static commands, multi-section pages now benefit from scroll-driven enhancements. These aren't new commands — they're improvements to how existing pages animate and behave. See [Understanding GSAP and Lenis](#understanding-gsap-and-lenis) for what the underlying libraries are and how they work.
 
 ### What Changed
 

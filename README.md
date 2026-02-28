@@ -130,6 +130,37 @@ The agent picks an aesthetic direction, reads the right reference template, gene
 
 To customize the output directory, browser command, or add your own diagram types and CSS patterns, edit the files directly. The agent reads them fresh each time.
 
+## GSAP + Lenis: The Scroll Animation Stack
+
+Six of the twelve commands produce **scroll-driven pages** — content that reveals progressively as the reader scrolls instead of showing everything at once. These pages are powered by two libraries:
+
+**[GSAP](https://gsap.com/)** (GreenSock Animation Platform) is the industry-standard JavaScript animation library used on over 12 million websites. The skill uses four GSAP components:
+
+- **ScrollTrigger** — triggers animations when elements enter the viewport, pins sections in place while the user scrolls, and ties animation progress to scroll position (`scrub`)
+- **SplitText** — splits headings into individual characters for staggered editorial-quality text reveals
+- **DrawSVGPlugin** — makes SVG paths (Mermaid diagram edges, timeline lines, step connectors) draw themselves progressively on scroll
+
+All GSAP plugins are **free** — Webflow acquired GreenSock in 2024 and removed all paywalls. Loaded from public CDN (~53 KB total).
+
+**[Lenis](https://lenis.darkroom.engineering/)** is a 2 KB smooth scroll library that replaces native browser scrolling with momentum-based physics. It provides consistent cross-browser easing, syncs with GSAP's animation ticker for jank-free scroll-driven animation, and makes long narrative pages feel responsive rather than mechanical. Disabled automatically when `prefers-reduced-motion` is enabled.
+
+**Which commands use them:**
+
+| Command | GSAP + Lenis | Key scroll features |
+|---|---|---|
+| `/trace-flow` | Full stack | Pinned system layers, scrub-driven code highlighting, DrawSVG connection lines |
+| `/changelog-story` | Full stack | DrawSVG timeline, batch milestone cards, pinned phase dividers |
+| `/deep-dive` | Full stack | Scrub-driven depth zoom, progressive node reveals, DrawSVG edges |
+| `/migration-guide` | Full stack | Pinned step sections, scrub-driven code transforms, step connector path |
+| `/dependency-explorer` | Full stack | Progressive depth reveals, DrawSVG connections, graph recentering |
+| `/onboarding-walkthrough` | Full stack | Pinned concept sections, scrub-driven code annotations, batch file tree reveals |
+| Static commands (`/diff-review`, `/project-recap`, etc.) | Partial | ScrollTrigger batch reveals + Lenis on multi-section (4+) pages only |
+| `/generate-slides`, `/fact-check` | None | Slides use viewport-fit engine; fact-check edits files in place |
+
+All scroll-driven pages degrade gracefully when `prefers-reduced-motion` is enabled — content displays immediately without animation, and the page is fully readable.
+
+See [`USAGE.md`](USAGE.md#understanding-gsap-and-lenis) for a detailed breakdown of what each GSAP feature does, how Lenis integrates, and per-command feature tables.
+
 ## Limitations
 
 - Requires a browser to view — no inline terminal rendering

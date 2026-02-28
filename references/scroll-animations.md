@@ -319,7 +319,11 @@ function animateMermaidDiagram(wrapSelector) {
 }
 
 // Call after mermaid.run() completes
+// CRITICAL: Mermaid changes page height — refresh ScrollTrigger so batch
+// reveals fire at the correct scroll positions (prevents gs-reveal misses
+// on sections below diagrams)
 mermaid.run().then(() => {
+  ScrollTrigger.refresh();
   animateMermaidDiagram('.mermaid-wrap');
 });
 ```
@@ -599,7 +603,11 @@ Full setup for a multi-section scroll-driven page. Copy and adapt.
   }
 
   // --- Section reveals ---
-  if (!prefersReduced) {
+  // IMPORTANT: If page has Mermaid diagrams, defer batch setup until after
+  // mermaid.run() completes + ScrollTrigger.refresh(). Mermaid changes page
+  // height, making batch trigger positions stale. Without this, gs-reveal
+  // elements below diagrams may not appear on first scroll.
+  function initBatchReveals() {
     ScrollTrigger.batch('.gs-reveal', {
       onEnter: (batch) => {
         gsap.to(batch, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', stagger: 0.08 });
@@ -615,6 +623,24 @@ Full setup for a multi-section scroll-driven page. Copy and adapt.
       start: 'top 85%',
       once: true,
     });
+  }
+  if (!prefersReduced) {
+    // If Mermaid is present, wait for it to finish rendering
+    if (document.querySelector('.mermaid')) {
+      window.addEventListener('mermaid-ready', () => {
+        ScrollTrigger.refresh();
+        initBatchReveals();
+      }, { once: true });
+      // Fallback in case event is missed
+      setTimeout(() => {
+        if (!document.querySelector('.gs-reveal[style*="opacity: 1"]')) {
+          ScrollTrigger.refresh();
+          initBatchReveals();
+        }
+      }, 3000);
+    } else {
+      initBatchReveals();
+    }
   }
 
   // --- TOC smooth scroll (if TOC exists) ---

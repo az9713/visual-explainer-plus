@@ -1613,6 +1613,9 @@ graph LR
   function initMermaid() {
     if (typeof window.__mermaidRun === 'function') {
       window.__mermaidRun().then(() => {
+        // Mermaid changes page height — refresh ScrollTrigger positions
+        // so batch reveals fire at the correct scroll offsets
+        ScrollTrigger.refresh();
         if (!prefersReduced) {
           animateMermaidDiagram('#mermaidWrap');
         }
