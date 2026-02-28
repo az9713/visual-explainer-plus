@@ -31,7 +31,7 @@ The agent follows a 4-step workflow defined in `SKILL.md`:
 1. **Think** — Pick aesthetic direction, audience, diagram type
 2. **Structure** — Read the matching reference template + `references/` docs before generating
 3. **Style** — Apply typography, color, animation, and depth rules
-4. **Deliver** — Write to `~/.agent/diagrams/` and open in browser
+4. **Deliver** — Write to `./.agent/diagrams/` and open in browser
 
 Templates use deliberately different palettes so the agent learns variety. The skill routes to the right rendering approach per diagram type (Mermaid for connections, CSS Grid for text-heavy cards, HTML tables for data, Chart.js for dashboards).
 

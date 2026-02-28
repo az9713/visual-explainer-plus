@@ -294,8 +294,8 @@ Ask yourself one question: **What am I trying to understand?**
 
 **How:**
 ```
-/fact-check                                          # verifies most recent file in ~/.agent/diagrams/
-/fact-check ~/.agent/diagrams/auth-review.html       # specific HTML review
+/fact-check                                          # verifies most recent file in ./.agent/diagrams/
+/fact-check ./.agent/diagrams/auth-review.html       # specific HTML review
 /fact-check ~/docs/migration-plan.md                 # a markdown plan
 ```
 
@@ -303,7 +303,7 @@ Ask yourself one question: **What am I trying to understand?**
 
 | Argument | What gets verified |
 |---|---|
-| *(none)* | Most recently modified `.html` file in `~/.agent/diagrams/` |
+| *(none)* | Most recently modified `.html` file in `./.agent/diagrams/` |
 | Explicit path (`.html`) | That specific HTML file |
 | Explicit path (`.md`) | That specific markdown file |
 | Any other text file | Extracts and verifies whatever factual claims about code it contains |
@@ -518,6 +518,6 @@ Ask yourself one question: **What am I trying to understand?**
 
 ## Output Location
 
-All generated HTML files are written to `~/.agent/diagrams/` with descriptive filenames based on content (e.g., `auth-architecture.html`, `diff-review-feature-branch.html`). The agent opens them in your browser automatically and tells you the file path so you can re-open or share them.
+All generated HTML files are written to `./.agent/diagrams/` with descriptive filenames based on content (e.g., `auth-architecture.html`, `diff-review-feature-branch.html`). The agent opens them in your browser automatically and tells you the file path so you can re-open or share them.
 
 The directory persists across sessions.
